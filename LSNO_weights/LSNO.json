@@ -1,0 +1,15 @@
+{
+ "id": "NN_Policy",
+ "gen": 5,
+ "nn_architecture": {
+  "type": "mlp",
+  "hidden_layers": [
+   256,
+   128,
+   128,
+   128
+  ]
+ },
+ "num_inputs": 37,
+ "num_outputs": 130
+}

@@ -1,0 +1,11 @@
+{
+  "id": "lost_sales_one_network",
+  "max_p": 99.0,
+  "max_leadtime": 10,
+  "evaluate": true,
+  "p": 4.0,
+  "leadtime": 3,
+  "discount_factor": 1.0,
+  "mean_demand": 5.0,
+  "stdev_demand": 5.477
+}
