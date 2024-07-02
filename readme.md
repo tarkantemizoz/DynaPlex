@@ -10,7 +10,7 @@ DynaPlex focuses on solving problems arising in Operations Management: Supply Ch
 ## High-level overview of folder structure
 
 - **`LICENSES/`**: Contains the licenses to used libraries and packages.
-- **`LSNO_weights/`**: Contains the weights for the generally capable agent -LSNO- for lost sales inventory control.
+- **`GC-LSN_weights/`**: Contains the weights for the generally capable agent  GC-LSN  for lost sales inventory control.
 - **`bash/`**: Contains the files used for running on a Linux HPC.
 - **`cmake/`**: Contains support functionality for building with CMake. 
 - **`docs/`**: Contains the documentation.
