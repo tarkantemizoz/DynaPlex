@@ -5,6 +5,7 @@ deep reinforcement learning, approximate dynamic programming, classical paramete
 
 DynaPlex focuses on solving problems arising in Operations Management: Supply Chain, Transportation and Logistics, Manufacturing, etc. 
 
+**`Important`**: For the paper titled "Zero-shot generalization in Inventory Management: Train, then Estimate and Decide", please see folder **`GC-LSN_weights/`** for the weights of the generally capable lost sales network GC-LSN, and  **`src/lib/models/models/Zero_Shot_Lost_Sales_Inventory_Control`** for the construction of the Super-Markov Decision Process of lost sales inventory control problem.
 ---
 
 ## High-level overview of folder structure
