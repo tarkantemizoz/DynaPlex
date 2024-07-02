@@ -2,7 +2,7 @@
 #include "mdp.h"
 #include "dynaplex/error.h"
 namespace DynaPlex::Models {
-	namespace lost_sales_censored_mix
+	namespace Zero_Shot_Lost_Sales_Inventory_Control
 	{
 		ConstantOrderPolicy::ConstantOrderPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config)
 			:mdp{ mdp }
@@ -59,11 +59,7 @@ namespace DynaPlex::Models {
 
 		int64_t GreedyCappedBaseStockPolicy::GetAction(const MDP::State& state) const
 		{
-			int64_t action = state.MaxSystemInv - state.total_inv;
-			if (action > state.MaxOrderSize)
-			{
-				action = state.MaxOrderSize;
-			}
+			int64_t action = state.OrderConstraint;
 			if (action < 0)
 			{
 				action = 0;

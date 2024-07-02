@@ -3,11 +3,11 @@
 #include "mdp.h"
 #include "dynaplex/vargroup.h"
 #include <memory>
+#include "dynaplex/modelling/discretedist.h"
 
 namespace DynaPlex::Models {
-	namespace lost_sales_one_network_extended
+	namespace Zero_Shot_Lost_Sales_Inventory_Control /*must be consistent everywhere for complete mdp defininition and associated policies.*/
 	{
-		// Forward declaration
 		class MDP;
 
 		class ConstantOrderPolicy

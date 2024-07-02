@@ -4,29 +4,25 @@
 #include <cmath>
 
 namespace DynaPlex::Models {
-	namespace lost_sales_all_v3 /*keep this in line with id below and with namespace name in header*/
+	namespace Zero_Shot_Lost_Sales_Inventory_Control 
 	{
 		int64_t MDP::GetL(const State& state) const
 		{
-			//return static_cast<int64_t>(state.limitingPeriod * 10);
 			return 100;
 		}
 
 		int64_t MDP::GetH(const State& state) const
 		{
-			//return std::max((int64_t)30, static_cast<int64_t>(state.limitingPeriod * 5));
 			return 21;
 		}
 
 		int64_t MDP::GetM(const State& state) const
 		{
-			//return static_cast<int64_t>(state.limitingPeriod * 100);
 			return 500;
 		}
 
 		int64_t MDP::GetReinitiateCounter(const State& state) const
 		{
-			//return static_cast<int64_t>(state.limitingPeriod * 50);
 			return 100;
 		}
 
@@ -2144,7 +2140,7 @@ namespace DynaPlex::Models {
 		void Register(DynaPlex::Registry& registry)
 		{
 			DynaPlex::Erasure::MDPRegistrar<MDP>::RegisterModel(
-				/*=id though which the MDP will be retrievable*/ "lost_sales_all_v3",
+				/*=id though which the MDP will be retrievable*/ "Zero_Shot_Lost_Sales_Inventory_Control",
 				/*description*/ "Lost sales problem with cyclic censored demand, censored stochastic lead times and censored random yields.)",
 				/*reference to passed registry*/registry); 
 		}

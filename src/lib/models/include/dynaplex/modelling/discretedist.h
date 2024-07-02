@@ -44,8 +44,6 @@ namespace DynaPlex
 
 	private:
 		std::vector<double> translatedPMF{};
-		std::vector<double> cumulativePMF{};
-		bool optimizedForSampling{ false };
 		int64_t min{ 0 };
 
 
@@ -80,6 +78,7 @@ namespace DynaPlex
 		static DiscreteDist GetPoissonDist(double mean);
 		static DiscreteDist GetGeometricDist(double mean);
 		static DiscreteDist GetGeometricDistFromProb(double p);
+		static DiscreteDist MultipleMix(const std::vector<DiscreteDist> dist_vec, std::vector<double> probs_vec);
 
 
 		static int64_t GetAdanEenigeResingSample(double mean, double stdev, DynaPlex::RNG&);
@@ -121,6 +120,8 @@ namespace DynaPlex
 		/// returns distribution that corresponds to the sum of this and another distribution (assuming the two distributions are independent)
 		DiscreteDist Add(const DiscreteDist& other) const;
 
+		DiscreteDist AddSelf(int64_t num_convolution) const;
+
 		/// Returns a discrete distribution that represents the maximum of the current distribution and the given value.
 		DiscreteDist TakeMaximumWith(int64_t value) const;
 
@@ -155,15 +156,9 @@ namespace DynaPlex
 		DiscreteDist();
 
 		DiscreteDist(const DynaPlex::VarGroup& vars);
-		
-		/// creates an internal data structure that enables samples to be drawn much faster, especially when there are many potential values that this might take on.
-		void OptimizeForSampling();
-
 		/// Returns a sample of the rv, using the rng as random number generator. 
 		int64_t GetSample(DynaPlex::RNG& rng) const;
-
-		/// Returns a sample x of the rv|x>=minimum_value. Uses the rng as random number generator. 
-		int64_t GetConditionalSample(DynaPlex::RNG& rng,int64_t minimum_value) const;
+		int64_t GetSampleFromProb(double randomValue) const;
 
 	};
 

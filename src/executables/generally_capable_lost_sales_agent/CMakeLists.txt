@@ -1,7 +1,7 @@
 ﻿
 cmake_minimum_required (VERSION 3.20)
 
-set(targetname lost_sales_one_network)
+set(targetname generally_capable_lost_sales_agent)
 
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS "*.cpp")
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "*.h")

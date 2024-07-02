@@ -15,10 +15,14 @@ namespace DynaPlex::Models {
 	namespace perishable_systems {
 		void Register(DynaPlex::Registry&);
 	}
+	namespace Zero_Shot_Lost_Sales_Inventory_Control {
+		void Register(DynaPlex::Registry&);
+	}
 	void RegistrationManager::RegisterAll(DynaPlex::Registry& registry) {
 		lost_sales::Register(registry);
 		bin_packing::Register(registry);
 		order_picking::Register(registry);
 		perishable_systems::Register(registry);
+		Zero_Shot_Lost_Sales_Inventory_Control::Register(registry);
 	}
 }

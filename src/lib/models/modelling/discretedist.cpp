@@ -123,8 +123,16 @@ namespace DynaPlex
 		{
 			std::vector<double> probs;
 			vars.Get("probs", probs);
+
 			int64_t offset;
-			vars.GetOrDefault("offset", offset, 0);
+			if (vars.HasKey("offset"))
+			{
+				vars.Get("offset", offset);
+			}
+			else
+			{
+				offset = 0;
+			}
 			*this = GetCustomDist(std::move(probs), offset);
 			break;
 		}
@@ -192,7 +200,7 @@ namespace DynaPlex
 	{   //trims the PMF to remove leading and trailing zeros and near-zeros. 
 		if (!IsProbMassFunction(ToBeTrimmed))
 		{
-			throw DynaPlex::Error("DiscretDist: Probabilities should be nonnegative and sum to 1.0");
+			throw DynaPlex::Error("DiscreteDist: Probabilities should be nonnegative and sum to 1.0");
 		}
 		double epsilon_used = epsilon;
 		size_t iter = 0;
@@ -416,21 +424,6 @@ namespace DynaPlex
 		return std::abs(TotalProb - 1.0) < 1e-8;
 	}
 
-	DiscreteDist DiscreteDist::Add(const DiscreteDist& other) const
-	{
-		int64_t minResult = this->min + other.min;
-		int64_t maxResult = this->Max() + other.Max();
-		std::vector<double> PMFResult(static_cast<size_t>(maxResult - minResult + 1ll), 0.0);
-		for (size_t i = 0; i < translatedPMF.size(); i++)
-		{
-			for (size_t j = 0; j < other.translatedPMF.size(); j++)
-			{
-				PMFResult[i + j] += this->translatedPMF[i] * other.translatedPMF[j];
-			}
-		}
-		Trim(PMFResult, minResult);
-		return DiscreteDist(PMFResult, minResult);
-	}
 	DiscreteDist DiscreteDist::TakeMaximumWith(int64_t value) const
 	{
 		int64_t max = Max();
@@ -617,6 +610,12 @@ namespace DynaPlex
 
 
 	DiscreteDist DiscreteDist::GetBinomialDist(double n, double p) {
+		if (p < 0.0 && p > -1e-4)
+			p = 0.0;
+
+		if (p < 1.0 + 1e-4 && p > 1.0)
+			p = 1.0;
+
 		if (n < 0 || p < 0.0 || p > 1.0) {
 			throw DynaPlex::Error("Invalid parameters for binomial distribution.");
 		}
@@ -633,9 +632,16 @@ namespace DynaPlex
 	}
 
 	DiscreteDist DiscreteDist::GetNegativeBinomialDist(double r, double p) {
+		if (p < 0.0 && p > -1e-6)
+			p = 1e-6;
+
+		if (p < 1.0 + 1e-6 && p > 1.0)
+			p = 1.0;
+
 		if (r <= 0 || p <= 0.0 || p > 1.0) {
 			throw DynaPlex::Error("Invalid parameters for negative binomial distribution.");
 		}
+
 		boost::math::negative_binomial_distribution<> negBinomDist(r, p);
 		std::vector<double> probs;
 		int64_t cutoff = boost::math::quantile(boost::math::complement(negBinomDist, epsilon));
@@ -649,6 +655,11 @@ namespace DynaPlex
 	}
 
 	DiscreteDist DiscreteDist::Mix(const DiscreteDist& other, double prob_of_other) const {
+		if (prob_of_other < 0.0 && prob_of_other > -1e-6)
+			prob_of_other = 0.0;
+		if (prob_of_other < 1.0 + 1e-6 && prob_of_other > 1.0)
+			prob_of_other = 1.0;
+
 		// Check if the mixing probability is valid
 		if (prob_of_other < 0.0 || prob_of_other > 1.0) {
 			throw DynaPlex::Error("DiscreteDist: Mix probability must be between 0.0 and 1.0.");
@@ -668,13 +679,69 @@ namespace DynaPlex
 			mixedPMF[i - mixedMin] = (1.0 - prob_of_other) * thisProb + prob_of_other * otherProb;
 		}
 
-		// Ensure the new PMF is still a valid probability mass function
-		if (!IsProbMassFunction(mixedPMF)) {
-			throw DynaPlex::Error("Mixed PMF does not sum to 1.0 or has negative probabilities.");
-		}
+		// Trim and ensure the new PMF is still a valid probability mass function
+		Trim(mixedPMF, mixedMin);
 
 		// Create a new distribution with the mixed PMF
 		return DiscreteDist(mixedPMF, mixedMin);
+	}
+
+	DiscreteDist DiscreteDist::MultipleMix(const std::vector<DiscreteDist> dist_vec, std::vector<double> probs_vec)
+	{
+		if (dist_vec.size() != probs_vec.size()) {
+			throw DynaPlex::Error("DiscreteDist: In MultipleMix the sizes of the vectors should be the same.");
+		}
+		double total_prob = 0.0;
+		for (int64_t i = 0; i < probs_vec.size(); i++) {
+			total_prob += probs_vec[i];
+		}
+		if (std::abs(total_prob - 1.0) >= 1e-8)
+			throw DynaPlex::Error("DiscreteDist: In MultipleMix total probabilities should sum up to 1.0.");
+
+		int64_t mixedMin = dist_vec.front().Min();
+		int64_t maxResult = dist_vec.back().Max();
+		for (size_t i = 0; i < dist_vec.size(); i++) {
+			if (dist_vec[i].Min() < mixedMin)
+				mixedMin = dist_vec[i].Min();
+			if (dist_vec[i].Max() > maxResult)
+				maxResult = dist_vec[i].Max();
+		}
+
+		std::vector<double> PMFResult(static_cast<size_t>(maxResult - mixedMin + 1ll), 0.0);
+		for (size_t i = mixedMin; i <= maxResult; ++i) {
+			for (size_t j = 0; j < dist_vec.size(); j++) {
+				PMFResult[i - mixedMin] += dist_vec[j].ProbabilityAt(i) * probs_vec[j];
+			}
+		}
+		Trim(PMFResult, mixedMin);
+
+		return DiscreteDist(PMFResult, mixedMin);
+	}
+
+	DiscreteDist DiscreteDist::AddSelf(int64_t num_convolution) const
+	{
+		auto self_dist = DiscreteDist(this->translatedPMF, this->min);
+		for (int64_t k = 0; k < num_convolution; k++) {
+			self_dist.Add(self_dist);
+		}
+
+		return self_dist;
+	}
+
+	DiscreteDist DiscreteDist::Add(const DiscreteDist& other) const
+	{
+		int64_t minResult = this->min + other.min;
+		int64_t maxResult = this->Max() + other.Max();
+		std::vector<double> PMFResult(static_cast<size_t>(maxResult - minResult + 1ll), 0.0);
+		for (size_t i = 0; i < translatedPMF.size(); i++)
+		{
+			for (size_t j = 0; j < other.translatedPMF.size(); j++)
+			{
+				PMFResult[i + j] += this->translatedPMF[i] * other.translatedPMF[j];
+			}
+		}
+		Trim(PMFResult, minResult);
+		return DiscreteDist(PMFResult, minResult);
 	}
 
 	double DiscreteDist::ProbabilityAt(int64_t value) const
@@ -718,87 +785,37 @@ namespace DynaPlex
 		return std::sqrt(Variance());
 	}
 
-	int64_t DiscreteDist::GetConditionalSample(DynaPlex::RNG& rng, int64_t minimum_value) const {
 
-		if (minimum_value > Max()) {
-			throw DynaPlex::Error("DiscreteDist::GetConditionalSample - minimum_value should not exceed the maximum value of the distribution.");
-		}
-		// Calculate the index for minimum_value, accounting for the actual minimum value of the distribution
-		size_t startIndex = std::max<int64_t>( minimum_value - min,0ll);
-		
-
-		if (optimizedForSampling)
-		{
-			double cumulativeProbabilityAtStart = startIndex > 0 ? cumulativePMF[startIndex - 1] : 0.0;
-			double randomValue = rng.genUniform() * (1.0 - cumulativeProbabilityAtStart) + cumulativeProbabilityAtStart;
-
-			// Use binary search over the range starting from startIndex
-			auto it = std::lower_bound(cumulativePMF.begin() + startIndex, cumulativePMF.end(), randomValue);
-			size_t index = std::distance(cumulativePMF.begin(), it);
-
-			return min + static_cast<int64_t>(index);
-		}
-		else
-		{
-			// Accumulate probabilities up to startIndex to adjust the random value generation
-			double cumulativeProbability = 0.0;
-			for (size_t i = 0; i < startIndex; ++i) {
-				cumulativeProbability += translatedPMF[i];
-			}
-
-			// Generate a random value adjusted for the already accumulated probability
-			double randomValue = rng.genUniform() * (1.0 - cumulativeProbability) + cumulativeProbability;
-
-			// Continue accumulating probabilities from startIndex and find the corresponding value
-			for (size_t i = startIndex; i < translatedPMF.size(); ++i) {
-				cumulativeProbability += translatedPMF[i];
-				if (randomValue < cumulativeProbability) {
-					return min + static_cast<int64_t>(i);
-				}
-			}
-
-			// This should technically never be reached if probabilities sum to 1,
-			// but it handles potential numerical inaccuracies.
-			return Max();
-		}
-	}
-
-	void DiscreteDist::OptimizeForSampling() {
-		//if (translatedPMF.size() > 9)
-		{
-			cumulativePMF.reserve(translatedPMF.size());
-			double sum = 0.0;
-			for (const auto& p : translatedPMF) {
-				sum += p;
-				cumulativePMF.push_back(sum);
-			}
-			optimizedForSampling = true;
-		}
-	}
 
 	int64_t DiscreteDist::GetSample(DynaPlex::RNG& rng) const {
 		// Generate a uniform random number between 0 and 1
 		double randomValue = rng.genUniform();
-
-		if (optimizedForSampling) {
-			// Use binary search on the cumulativePMF
-			auto it = std::lower_bound(cumulativePMF.begin(), cumulativePMF.end(), randomValue);
-			size_t index = std::distance(cumulativePMF.begin(), it);
-			return min + static_cast<int64_t>(index);
-		}
-		else {
-			double cumulativeProbability = 0.0;
-			for (size_t i = 0; i < translatedPMF.size(); i++) {
-				cumulativeProbability += translatedPMF[i];
-				if (randomValue < cumulativeProbability) {
-					return min + static_cast<int64_t>(i);
-				}
+		double cumulativeProbability = 0.0;
+		for (size_t i = 0; i < translatedPMF.size(); i++) {
+			cumulativeProbability += translatedPMF[i];
+			if (randomValue < cumulativeProbability) {
+				return min + static_cast<int64_t>(i);
 			}
-			// This should technically never be reached if probabilities sum to 1, 
-			// but it handles potential numerical inaccuracies.
-			return Max();
 		}
+
+		// This should technically never be reached if probabilities sum to 1, 
+		// but it handles potential numerical inaccuracies.
+		return Max();
 	}
 
+	int64_t DiscreteDist::GetSampleFromProb(double randomValue) const {
+		// Generate a uniform random number between 0 and 1
+		double cumulativeProbability = 0.0;
+		for (size_t i = 0; i < translatedPMF.size(); i++) {
+			cumulativeProbability += translatedPMF[i];
+			if (randomValue < cumulativeProbability) {
+				return min + static_cast<int64_t>(i);
+			}
+		}
+
+		// This should technically never be reached if probabilities sum to 1, 
+		// but it handles potential numerical inaccuracies.
+		return Max();
+	}
 
 }
