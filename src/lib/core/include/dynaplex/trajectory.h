@@ -38,7 +38,7 @@ namespace DynaPlex {
 	      * Do not manually change this.
 	      */
 		double CumulativeReturn;
-		
+
 		// Move constructor
 		Trajectory(Trajectory&& other) noexcept = default;
 
@@ -50,8 +50,8 @@ namespace DynaPlex {
 		// but for MDP with hidden state variables, this implementation would not be in line with people's expectations!
 		// if functionality in this vain is needed, implement as part of MDP where it can be better documented. 
 		Trajectory(const Trajectory& other) = delete;
-		Trajectory& operator=(const Trajectory& other) =delete;
-		
+		Trajectory& operator=(const Trajectory& other) = delete;
+
 
 	private:
 		/// (type-erased) state of the system.
@@ -96,10 +96,11 @@ namespace DynaPlex {
 		 */
 		int64_t ExternalIndex;	
 	
+
 		/**
 		 * Creates a trajectory without initial state, and with uninitialized RNGProvider.
 		 * must set initial state and seed RNGProvider before using. 
-		 * external_index is some context_defined item that is not muted by MDPAdapter. 
+		 * external_index is some context_defined item that is not muted by MDPAdapter.
 		 */
 		explicit Trajectory(int64_t externalIndex = 0);
 

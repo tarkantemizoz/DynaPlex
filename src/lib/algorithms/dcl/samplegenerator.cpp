@@ -27,7 +27,11 @@ namespace DynaPlex::DCL {
 		config.GetOrDefault("sampling_probability", sampling_probability, 1.0);
 		if (N < 1 || N >= (1ll << 30))
 			throw DynaPlex::Error("Value of N is invalid: " + std::to_string(N) + ". Must be positive and smaller than " + std::to_string(1 << 30));
-
+	
+		config.GetOrDefault("SimulateOnlyPromisingActions", SimulateOnlyPromisingActions, false);
+		config.GetOrDefault("Num_Promising_Actions", Num_Promising_Actions, 10);
+		if (SimulateOnlyPromisingActions && Num_Promising_Actions < 2)
+			throw DynaPlex::Error("Value of Num_Promising_Actions is invalid: " + std::to_string(Num_Promising_Actions) + ". Must be positive and greater than 1");
 
 		config.GetOrDefault("json_save_format", json_save_format, -1);
 		config.GetOrDefault("rng_seed", rng_seed, 15112017);
@@ -57,23 +61,23 @@ namespace DynaPlex::DCL {
 		Trajectory trajectory{};
 		trajectory.RNGProvider.SeedEventStreams(false, rng_seed, offset);
 		DynaPlex::RNG rng(false, rng_seed, offset);
-
+	
 		bool final_reached_once = false;
 		while (num_samples_added < somesamples.size())
 		{
 			mdp->InitiateState({ &trajectory,1 });
-
+			int64_t WarmUpSteps = mdp->GetWarmUpSteps(trajectory.GetState(), L);
 			if (mdp->IsInfiniteHorizon())
 			{//do a warm-up of L steps. 
 				int64_t actual_steps = 0;
-				while (trajectory.PeriodCount < L)
+				while (trajectory.PeriodCount < WarmUpSteps)
 				{
-					if (mdp->IncorporateUntilAction({ &trajectory,1 }, L))
+					if (mdp->IncorporateUntilAction({ &trajectory,1 }, WarmUpSteps))
 					{
 						mdp->IncorporateAction({ &trajectory,1 }, policy);
 
 
-						if (actual_steps++ > 10000 * L)
+						if (actual_steps++ > 10000 * WarmUpSteps)
 							throw DynaPlex::Error("DCL: GenerateSamplesOnThread - it seems that there are hardly any time-steps in this MDP. Aborting. ");
 					}
 					else
@@ -85,7 +89,8 @@ namespace DynaPlex::DCL {
 			while (!final_reached) {
 				if (mdp->IncorporateUntilAction({ &trajectory,1 }))
 				{
-					if (mdp->IsInfiniteHorizon() && trajectory.PeriodCount == reinitiate_counter + L)
+					int64_t restart_counter = mdp->GetRestartCounter(trajectory.GetState(), reinitiate_counter);
+					if (mdp->IsInfiniteHorizon() && trajectory.PeriodCount >= restart_counter + WarmUpSteps)
 					{
 						break;//the while(!final_reached) loop, to start trajectory afresh. 
 					}
@@ -98,14 +103,18 @@ namespace DynaPlex::DCL {
 					else {
 						if (rng.genUniform() < sampling_probability)
 						{
+							int64_t allowed_size = SimulateOnlyPromisingActions ? std::min((int64_t) allowed.size(), Num_Promising_Actions) : allowed.size();
+							int64_t HorizonLength = mdp->GetHorizonLength(trajectory.GetState(), H);
+							int64_t NumRollouts = mdp->GetNumRollouts(trajectory.GetState(), M);
+
 							auto& sample = somesamples[num_samples_added];
-							if (enable_sequential_halving && (M > std::ceil(std::log(allowed.size()) / std::log(2)))) {
-								sequentialhalving_action_selector.SetAction(trajectory, sample, offset + num_samples_added);
+							if (enable_sequential_halving && (NumRollouts > std::ceil(std::log(allowed_size) / std::log(2)))) {
+								sequentialhalving_action_selector.SetAction(trajectory, sample, offset + num_samples_added, HorizonLength, NumRollouts);
 							}
 							else {
-								uniform_action_selector.SetAction(trajectory, sample, offset + num_samples_added);
+								uniform_action_selector.SetAction(trajectory, sample, offset + num_samples_added, HorizonLength, NumRollouts);
 							}
-
+							//std::cout << "Thread:  " << thread_offset << "  total required:  " << somesamples.size() << "  Num samples added:  " << num_samples_added << std::endl;
 							if constexpr (std::atomic<int64_t>::is_always_lock_free)
 							{
 								(*total_samples_collected.get())++;
@@ -133,7 +142,7 @@ namespace DynaPlex::DCL {
 						if (trajectory.Category.IsAwaitEvent())
 							throw DynaPlex::Error("DCL: GenerateSamplesOnThread - trajectory is AwaitEvent after calling mdp->IncorporateUntilAction (without MaxPeriodCount.)");
 				}
-			}
+			}			
 		}
 		if (!silent)
 			if (!mdp->IsInfiniteHorizon() && !final_reached_once && thread_offset == 0)
@@ -153,6 +162,9 @@ namespace DynaPlex::DCL {
 
 		if (!policy)
 			policy = mdp->GetPolicy("random");
+
+		if (SimulateOnlyPromisingActions)
+			throw DynaPlex::Error("DCL: GenerateSamples, action masking does not work when SimulateOnlyPromisingActions is true.");
 
 		auto temp_path = system.filepath(mdp->Identifier(), "temp", "samples_complete.json");
 		GenerateStateSamples(policy, temp_path);
@@ -181,20 +193,21 @@ namespace DynaPlex::DCL {
 		if (!silent)
 			system << "Generating " << N << " samples based on policy type: " << policy->TypeIdentifier() << std::endl;
 
-		uniform_action_selector = DynaPlex::DCL::UniformActionSelector(rng_seed, H, M, mdp, policy);
-		sequentialhalving_action_selector = DynaPlex::DCL::SequentialHalving(rng_seed, H, M, mdp, policy);
+		uniform_action_selector = DynaPlex::DCL::UniformActionSelector(rng_seed, mdp, policy, SimulateOnlyPromisingActions, Num_Promising_Actions);
+		sequentialhalving_action_selector = DynaPlex::DCL::SequentialHalving(rng_seed, mdp, policy, SimulateOnlyPromisingActions, Num_Promising_Actions);
 		//Get the samples that must be collected for this specific node 
 		auto splits = DynaPlex::Parallel::get_splits(N, system.WorldSize());
 		auto& [start_for_node, end_for_node] = splits[system.WorldRank()];
 
 		node_sampling_offset = start_for_node;
 		int64_t to_collect_on_node = end_for_node - start_for_node;
+
 		//Create space for the samples collected on this node, and collect the samples:
 		std::vector<DynaPlex::NN::Sample> sample_vec(to_collect_on_node);
 		auto work = [this, &policy](std::span<DynaPlex::NN::Sample> somesamples, int64_t thread_offset) {
 			this->GenerateSamplesOnThread(somesamples, policy, thread_offset); };
 
-
+	
 		//for reporting progress:
 		DynaPlex::Parallel::ProgressReporter reporter;
 		//Default option, used unless we can have an lock_free sample counter.
@@ -215,7 +228,6 @@ namespace DynaPlex::DCL {
 				else
 					if (!silent)
 						system << "Progress (node 0 only):" << std::endl;
-
 				reporter = [this, to_collect_on_node](const std::atomic<bool>& error_occurred) {
 					int64_t chars_printed = 0;
 					int64_t max_chars_to_print = 50;
@@ -238,20 +250,20 @@ namespace DynaPlex::DCL {
 					}
 					if (!silent)
 						system << std::endl;
-					};
-
+				};
 			}
 		}
 
 		DynaPlex::Parallel::parallel_compute<DynaPlex::NN::Sample>(sample_vec, work, system.HardwareThreads(), reporter);
 		seed_offset += N;
-
+		
 		//gather all the collected samples over the threads into sample_data.
 		DynaPlex::NN::SampleData sample_data{ mdp };
 		for (auto& sample : sample_vec)
 		{
-			if (sample.state)
+			if (sample.state) {
 				sample_data.Samples.push_back(std::move(sample));
+			}
 		}
 
 		//check that each sample number is bigger than the previous. 
@@ -264,8 +276,10 @@ namespace DynaPlex::DCL {
 		}
 
 		//nodes other than 0 save their samples
-		if (system.WorldRank() > 0)
+		if (system.WorldRank() > 0) {
 			sample_data.SaveToFile(mdp, GetPathOfTempSampleFile(system.WorldRank()));
+		}
+
 		//wait until saving on all nodes completes. 
 		system.AddBarrier();
 		//load the collected samples by this and other nodes, and save the combined samples.
@@ -277,6 +291,7 @@ namespace DynaPlex::DCL {
 				sample_data.AddFromFile(mdp, GetPathOfTempSampleFile(rank));
 				system.remove_file(GetPathOfTempSampleFile(rank));
 			}
+
 			DynaPlex::RNG rng(false, rng_seed);
 			std::shuffle(sample_data.Samples.begin(), sample_data.Samples.end(), rng.gen());
 			sample_data.SaveToFile(mdp, path, json_save_format, silent);

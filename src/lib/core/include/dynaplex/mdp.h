@@ -20,11 +20,11 @@ namespace DynaPlex
 
 		/**
 		 * Indicates whether the MDP has state variables that are hidden
-		 * 
+		 *
 		 *Notes:
 		 * -hidden state variables are members of the state not available to valid policies, i.e. they cannot be inferred from features.
-		 * -It should be possible to Reset the value of hidden variables through a call to ResetHiddenStateVariables(State&, DynaPlex::RNG&) const;	
- 		 * -In fact, this function tests presence of that function, and assumes availability of hidden variables if the function is present.
+		 * -It should be possible to Reset the value of hidden variables through a call to ResetHiddenStateVariables(State&, DynaPlex::RNG&) const;
+		 * -In fact, this function tests presence of that function, and assumes availability of hidden variables if the function is present.
 		 * -The concept is related, but not exactly same, as the MDP being a POMDP.
 		 */
 		virtual bool HasHiddenStateVariables() const = 0;
@@ -44,13 +44,7 @@ namespace DynaPlex
 		 */
 		virtual bool IsAllowedAction(const DynaPlex::dp_State&, int64_t action) const = 0;
 
-		/**
-		 * Retrieves the number of allowed actions in a given state.
-		 *
-		 * @return the number of allowed actions for the MDP.
-		 */
-		virtual int64_t CountAllowedActions(const DynaPlex::dp_State&) const = 0;
-
+		
 		/**
 		 * Determines if the MDP provides a state representations with flat features.
 		 *
@@ -149,10 +143,28 @@ namespace DynaPlex
 		virtual void GetMask(const std::span<DynaPlex::Trajectory> trajectories, std::span<bool> mask) const = 0;
 
 		/**
+		 * Writes the mask onto the span for a given state. In particular, sets all allowed actions to true, and leaves other actions unchanged.
+		 * mask should have dimension NumValidActions();
+		 */
+		virtual void GetMask(const DynaPlex::dp_State& state, std::span<bool> mask) const = 0;
+
+		/**
 		 * For each trajectory, interprets the corresponding portion of values_per_valid_action as scores for the various action. Sets the
 		 * arg_max taking into account those scores, and the AllowedActions for each trajectory.
 		 */
 		virtual void SetArgMaxAction(std::span<Trajectory>, std::span<float> values_per_valid_action) const = 0;
+
+		/**
+		 * For a given state, returns 'num_actions' many promising actions based on their score values.
+		 */
+		virtual std::vector<int64_t> GetPromisingActions(const DynaPlex::dp_State& state, std::span<float> values_per_valid_action, int64_t num_actions) const = 0;
+
+		virtual void CommunicateMDP(DynaPlex::dp_State& state) const = 0;
+
+		virtual int64_t GetWarmUpSteps(const DynaPlex::dp_State& state, int64_t L) const = 0;
+		virtual int64_t GetRestartCounter(const DynaPlex::dp_State& state, int64_t restart_counter) const = 0;
+		virtual int64_t GetHorizonLength(const DynaPlex::dp_State& state, int64_t H) const = 0;
+		virtual int64_t GetNumRollouts(const DynaPlex::dp_State& state, int64_t M) const = 0;
 
 
 		/**
@@ -228,10 +240,6 @@ namespace DynaPlex
 		 */
 		virtual bool ProvidesEventProbs() const = 0;
 
-		/**
-		 * Returns the state category for this is state.
-		 */
-		virtual DynaPlex::StateCategory GetStateCategory(const DynaPlex::dp_State& dp_state) const = 0;
 
 		/**
 		 * Generates a policy specific to this MDP based on the provided VarGroup.

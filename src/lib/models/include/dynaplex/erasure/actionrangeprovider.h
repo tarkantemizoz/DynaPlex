@@ -158,19 +158,6 @@ namespace DynaPlex::Erasure
         {
             return DynaPlex::Erasure::IsAllowedAction<t_MDP>(*mdp, state, action);
         }
-
-        int64_t CountAllowedActions(const typename t_MDP::State& state) const
-        {
-            int64_t counter = 0;
-            for (int64_t action = min_action; action < max_action; action++)
-            {
-                if (IsAllowedAction(state, action))
-                {
-                    counter++;
-                }
-            }
-            return counter;
-        }
         
         ActionRange<t_MDP> operator()(const typename t_MDP::State& state) const
         {
@@ -179,12 +166,8 @@ namespace DynaPlex::Erasure
 
     private:
         std::shared_ptr<const t_MDP> mdp;
-        //inclusive
+
         int64_t min_action;
-        //exclusive
         int64_t max_action;
-        //so the action range is [min_action,max_action), with isallowedaction determining whether actions
-        //are allowed for a particular case. 
-    
     };
 }

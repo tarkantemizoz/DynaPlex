@@ -21,8 +21,8 @@ namespace DynaPlex {
 
         // Combining the values
         uint64_t seed = (static_cast<uint64_t>(sample) << (23 + 10)) |
-                           (static_cast<uint64_t>(trajectory) << 10) |
-                            static_cast<uint64_t>(stream);
+            (static_cast<uint64_t>(trajectory) << 10) |
+            static_cast<uint64_t>(stream);
 
         // XOR with global_seed
         seed ^= static_cast<uint64_t>(global_seed);
@@ -38,12 +38,12 @@ namespace DynaPlex {
         return seed;
     }
 
-    RNG::RNG(uint64_t seed): generator_(seed)
+    RNG::RNG(uint64_t seed) : generator_(seed)
     {
 
     }
 
-    RNG::RNG(bool eval, int64_t global_seed, int64_t sample, int64_t trajectory, int64_t stream ):
+    RNG::RNG(bool eval, int64_t global_seed, int64_t sample, int64_t trajectory, int64_t stream) :
         generator_(CombineSeeds(eval, global_seed, sample, trajectory, stream))
     {
     }

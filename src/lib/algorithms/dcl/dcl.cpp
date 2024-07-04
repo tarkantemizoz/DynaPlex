@@ -13,13 +13,13 @@ namespace DynaPlex::Algorithms {
 	{
 		if (!mdp)
 			throw DynaPlex::Error("DCL: mdp should not be null");
+	
 		config.GetOrDefault("rng_seed", rng_seed, 15112017);
 		if (rng_seed < 0)
 			throw DynaPlex::Error("DCL :: Invalid rng_seed - should be non-negative");
+
 		config.GetOrDefault("silent", silent, false);
 		config.GetOrDefault("retrain_lastgen_only", retrain_lastgen_only, false);
-		config.GetOrDefault("delete_samples_after_training", delete_samples_after_training, false);
-		config.GetOrDefault("keep_samples_lastgen_only", keep_samples_lastgen_only, false);
 		config.GetOrDefault("resume_gen", resume_gen,0);
 		config.GetOrDefault("num_gens", num_gens, 1);
 
@@ -34,7 +34,7 @@ namespace DynaPlex::Algorithms {
 		if (config.HasKey("nn_training"))
 			config.Get("nn_training", nn_training);
 
-		trainer = DynaPlex::NN::PolicyTrainer(system, mdp, nn_training,rng_seed);
+		trainer = DynaPlex::NN::PolicyTrainer(system, mdp, nn_training, rng_seed);
 
 		if (config.HasKey("nn_architecture"))
 			config.Get("nn_architecture", nn_architecture);
@@ -52,20 +52,20 @@ namespace DynaPlex::Algorithms {
 
 		if (retrain_lastgen_only)
 		{
-			if(system.WorldRank()==0)
-				trainer.TrainPolicy(nn_architecture, num_gens, GetPathOfSampleFile(num_gens - 1),silent);
+			if (system.WorldRank() == 0)
+				trainer.TrainPolicy(nn_architecture, num_gens, GetPathOfSampleFile(num_gens - 1), silent);
 		}
 		else
 		{
 			for (int64_t generation = resume_gen; generation < num_gens; generation++) {
 				DynaPlex::Policy policy = GetPolicy(generation);
+
 				sampleCollector.GenerateStateSamples(policy, GetPathOfSampleFile(generation));
 				if(!silent)
 					system << "Elapsed time: " << system.Elapsed() << std::endl;
 				if (system.WorldRank() == 0) {
 					trainer.TrainPolicy(nn_architecture, generation + 1, GetPathOfSampleFile(generation), silent);
-					if (delete_samples_after_training || (keep_samples_lastgen_only && generation < num_gens - 1))
-						system.remove_file(GetPathOfSampleFile(generation));
+					system.remove_file(GetPathOfSampleFile(generation));
 				}
 				system.AddBarrier();
 			}

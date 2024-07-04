@@ -16,9 +16,9 @@ namespace DynaPlex {
 		 *
 		 * Parameters:
 		 * - eval (bool): Indicates whether the rng will be used for training or evaluation purposes. Seeds used for training purposes are non-overlapping with
-		 * those used for evaluation purposes. 
+		 * those used for evaluation purposes.
 		 * - global_seed (int64_t): A global seed value used to introduce additional variability. Must be a non-negative value
-		 *   (most significant bit must be 0).	
+		 *   (most significant bit must be 0).
 		 * - sample (int64_t): A value representing the sample. Must be non-negative and less than 2^30.
 		 * - trajectory (int64_t): A value representing the trajectory. Must be non-negative and less than 2^23.
 		 * - stream (int64_t): A value representing the stream. Must be non-negative and less than 2^10.
@@ -32,9 +32,9 @@ namespace DynaPlex {
 		 * Return:
 		 * - DynaPlex::RNG based on the generated training seed.
 		 */
-	    RNG(bool eval, int64_t global_seed = 15112017, int64_t sample = (1LL << 30) - 1, int64_t trajectory = (1LL << 23) - 1, int64_t stream = (1LL << 10) - 1);
+		RNG(bool eval, int64_t global_seed = 15112017, int64_t sample = (1LL << 30) - 1, int64_t trajectory = (1LL << 23) - 1, int64_t stream = (1LL << 10) - 1);
 
-		
+
 		type& gen() {
 			return generator_;
 		}

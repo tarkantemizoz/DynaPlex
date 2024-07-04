@@ -12,6 +12,8 @@
 #include "policyregistry.h"
 #include "stateadapter.h"
 #include <cassert>
+#include <cmath>
+#include <algorithm>
 
 namespace DynaPlex::Erasure
 {
@@ -23,7 +25,7 @@ namespace DynaPlex::Erasure
 		static_assert(HasState<t_MDP>, "MDP must publicly define a nested type or using declaration for State");
 		static_assert(HasGetStaticInfo<t_MDP>, "MDP must publicly define GetStaticInfo() const returning DynaPlex::VarGroup.");
 		using t_State = typename t_MDP::State;
-		using t_Event = typename ConditionalEvent<t_MDP, HasEvent<t_MDP>>::type;
+		using t_Event = std::conditional_t<HasEvent<t_MDP>, typename t_MDP::Event, int64_t>;
 
 		static_assert(DynaPlex::Concepts::ConvertibleToVarGroup<t_State>, "MDP::State must define VarGroup ToVarGroup() const");
 
@@ -105,7 +107,54 @@ namespace DynaPlex::Erasure
 		}
 
 
+		void CommunicateMDP(DynaPlex::dp_State& dp_state) const override
+		{
+			if constexpr (HasCommunicateMDP<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				mdp->CommunicateWithMDP(t_state);
+			}
+		}
 
+		int64_t GetWarmUpSteps(const DynaPlex::dp_State& dp_state, int64_t L) const override
+		{
+			if constexpr (HasStateDependendentL<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				return mdp->GetL(t_state);
+			}
+			return L;
+		}
+
+		int64_t GetRestartCounter(const DynaPlex::dp_State& dp_state, int64_t restart_counter) const override
+		{
+			if constexpr (HasStateDependendentRestartCounter<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				return mdp->GetReinitiateCounter(t_state);
+			}
+			return restart_counter;
+		}
+
+		int64_t GetHorizonLength(const DynaPlex::dp_State& dp_state, int64_t H) const override
+		{
+			if constexpr (HasStateDependendentH<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				return mdp->GetH(t_state);
+			}
+			return H;
+		}
+
+		int64_t GetNumRollouts(const DynaPlex::dp_State& dp_state, int64_t M) const override
+		{ 
+			if constexpr (HasStateDependendentM<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				return mdp->GetM(t_state);
+			}
+			return M;
+		}
 
 		void RegisterPolicies()
 		{
@@ -126,7 +175,6 @@ namespace DynaPlex::Erasure
 		bool HasHiddenStateVariables() const override {
 			return HasResetHiddenStateVariables<t_MDP, t_State, DynaPlex::RNG>;
 		}
-
 
 		void InitializeFeatureMetaInfo(const DynaPlex::VarGroup& static_vars)
 		{
@@ -248,7 +296,23 @@ namespace DynaPlex::Erasure
 			return std::equality_comparable<t_State>;
 		}
 
-	
+		void GetMask(const DynaPlex::dp_State& state, std::span<bool> mask) const override
+		{
+			auto num_valid_actions = provider.NumValidActions();
+			if (num_valid_actions != mask.size())
+				throw DynaPlex::Error("MDP->GetMask: size of mask argument does not equal NumAllowedActions");
+
+			auto& t_state = ToState(state);
+
+			auto cat = mdp->GetStateCategory(t_state);
+			if (!cat.IsAwaitAction())
+				throw DynaPlex::Error("MDP->GetMask: state Category does not satisfy Category.IsAwaitAction().");
+
+			for (auto action : provider(t_state))
+			{
+				mask[action] = true;
+			}
+		}
 
 		void GetFlatFeatures(const DynaPlex::dp_State& state, std::span<float> feats) const override
 		{
@@ -273,6 +337,38 @@ namespace DynaPlex::Erasure
 
 		}
 
+		std::vector<int64_t> GetPromisingActions(const DynaPlex::dp_State& state, std::span<float> values_per_valid_action, int64_t num_actions) const override
+		{
+			size_t num_valid_actions = static_cast<size_t>(provider.NumValidActions());
+			if (num_valid_actions != values_per_valid_action.size())
+				throw DynaPlex::Error("MDP->GetPromisingActions - nonconformant dimensions of values_per_valid_action and num_valid_actions.  ");
+
+			auto& t_state = ToState(state);
+
+			auto actions = provider(t_state);
+			std::vector<std::pair<int64_t, double>> paired;
+			for (const auto& action : actions)
+			{
+				paired.push_back({ action, values_per_valid_action[action] });
+			}
+
+			// Sorting the actions based on their scores
+			std::sort(paired.begin(), paired.end(), [](const auto& a, const auto& b) {
+				return a.second > b.second;
+				});
+
+			int64_t num_allowed_actions = actions.Count();
+			int64_t top_actions = std::min(num_allowed_actions, num_actions);
+
+			std::vector<int64_t> vec;
+			vec.reserve(top_actions);
+			// Extracting the best performing actions
+			for (int64_t i = 0; i < top_actions; ++i) {
+				vec.push_back(paired[i].first);
+			}
+			
+			return vec;
+		}
 
 		void SetArgMaxAction(std::span<Trajectory> trajectories, std::span<float> values_per_valid_action) const override
 		{
@@ -356,7 +452,7 @@ namespace DynaPlex::Erasure
 				throw DynaPlex::Error("MDP->GetState(const VarGroup&): MDP must publicly define MDP::GetState(const VarGroup&) const returning MDP::State. ");
 		}
 		bool StatesAreEqual(const DynaPlex::dp_State& state1, const DynaPlex::dp_State& state2) const override
-		{			
+		{
 			if constexpr (std::equality_comparable<t_State>)
 			{
 				auto& t_state1 = ToState(state1);
@@ -398,10 +494,6 @@ namespace DynaPlex::Erasure
 			return provider.IsAllowedAction(t_state, action);
 		}
 
-		int64_t CountAllowedActions(const DynaPlex::dp_State& dp_state) const override {
-			auto& t_state = ToState(dp_state);
-			return provider.CountAllowedActions(t_state);
-		}
 
 		std::string TypeIdentifier() const override
 		{
@@ -477,28 +569,18 @@ namespace DynaPlex::Erasure
 						traj.PeriodCount++;
 						traj.EffectiveDiscountFactor *= discount_factor;
 					}
-					if constexpr (HasModifyStateWithEvent<t_MDP, t_State, t_Event>)
+					if constexpr (HasGetEvent<t_MDP, t_Event, DynaPlex::RNG>)
 					{
-						if constexpr (HasGetEvent<t_MDP, t_Event, DynaPlex::RNG>)
-						{
-							t_Event Event = mdp->GetEvent(traj.RNGProvider.GetEventRNG(event_stream));
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
-						}
-						else if constexpr (HasGetStateDependentEvent<t_MDP, t_State, t_Event, DynaPlex::RNG>)
-						{
-							t_Event Event = mdp->GetEvent(t_state, traj.RNGProvider.GetEventRNG(event_stream));
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
-						}
-						else
-							throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define function GetEvent(DynaPlex::RNG&) returning MDP::Event. ");
+						t_Event Event = mdp->GetEvent(traj.RNGProvider.GetEventRNG(event_stream));
+						traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
+					}
+					else if constexpr (HasGetStateDependentEvent<t_MDP, t_State, t_Event, DynaPlex::RNG>)
+					{
+						t_Event Event = mdp->GetEvent(t_state, traj.RNGProvider.GetEventRNG(event_stream));
+						traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
 					}
 					else
-						if constexpr (HasModifyStateWithRNG<t_MDP, t_State, DynaPlex::RNG>)
-						{
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, traj.RNGProvider.GetEventRNG(event_stream)) * traj.EffectiveDiscountFactor;
-						}
-						else							
-							throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define ModifyStateWithEvent(MDP::State&, const MDP::Event&) returning double.");
+						throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define function GetEvent(DynaPlex::RNG&) returning MDP::Event. ");
 					traj.Category = mdp->GetStateCategory(t_state);
 
 					int64_t action_count;
@@ -555,7 +637,7 @@ namespace DynaPlex::Erasure
 			{
 				if (traj.Category.IsAwaitEvent())
 				{
-					auto& t_state = ToState(traj.GetState());
+					auto& state = ToState(traj.GetState());
 					auto event_stream = traj.Category.Index();
 					if (event_stream == 0)
 					{
@@ -567,26 +649,22 @@ namespace DynaPlex::Erasure
 						if constexpr (HasGetEvent<t_MDP, t_Event, DynaPlex::RNG>)
 						{
 							t_Event Event = mdp->GetEvent(traj.RNGProvider.GetEventRNG(event_stream));
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
+							traj.CumulativeReturn += mdp->ModifyStateWithEvent(state, Event) * traj.EffectiveDiscountFactor;
 						}
 						else if constexpr (HasGetStateDependentEvent<t_MDP, t_State, t_Event, DynaPlex::RNG>)
 						{
-							t_Event Event = mdp->GetEvent(t_state, traj.RNGProvider.GetEventRNG(event_stream));
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, Event) * traj.EffectiveDiscountFactor;
+							t_Event Event = mdp->GetEvent(state, traj.RNGProvider.GetEventRNG(event_stream));
+							traj.CumulativeReturn += mdp->ModifyStateWithEvent(state, Event) * traj.EffectiveDiscountFactor;
 						}
 						else
 							throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define function GetEvent(DynaPlex::RNG&) returning MDP::Event. ");
 
 					}
 					else //if constexpr 
-						if constexpr (HasModifyStateWithRNG<t_MDP, t_State, DynaPlex::RNG>)
-						{
-							traj.CumulativeReturn += mdp->ModifyStateWithEvent(t_state, traj.RNGProvider.GetEventRNG(event_stream)) * traj.EffectiveDiscountFactor;
-						}
-						else
-							throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define ModifyStateWithEvent(MDP::State&, const MDP::Event&) returning double.");
+						throw DynaPlex::Error("MDP->IncorporateEvent: " + mdp_type_id + "\nMDP does not publicly define ModifyStateWithEvent(MDP::State&, const MDP::Event&) returning double.");
 
-					traj.Category = mdp->GetStateCategory(t_state);
+
+					traj.Category = mdp->GetStateCategory(state);
 					if (traj.Category.IsAwaitEvent())
 					{
 						EventsRemaining = true;
@@ -631,14 +709,6 @@ namespace DynaPlex::Erasure
 				traj.Category = mdp->GetStateCategory(t_state);
 			}
 		}
-
-
-		DynaPlex::StateCategory GetStateCategory(const DynaPlex::dp_State& dp_state) const override
-		{
-			auto& t_state = ToState(dp_state);
-			return mdp->GetStateCategory(t_state);
-		}
-
 
 		double Objective(const DynaPlex::dp_State& state) const override
 		{//currently, only minimization is supported. 

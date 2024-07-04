@@ -12,8 +12,8 @@ namespace DynaPlex::DCL {
 		int64_t experiment_number;
 	};
 
-	SequentialHalving::SequentialHalving(int64_t rng_seed, int64_t H, int64_t M, DynaPlex::MDP& mdp, DynaPlex::Policy& policy)
-		: rng_seed{ rng_seed }, H{ H }, M{ M }, mdp{ mdp }, policy{ policy }
+	SequentialHalving::SequentialHalving(int64_t rng_seed, DynaPlex::MDP& mdp, DynaPlex::Policy& policy, bool SimulateOnlyPromisingActions, int64_t Num_Promising_Actions)
+		: rng_seed{ rng_seed }, mdp{ mdp }, policy{ policy }, SimulateOnlyPromisingActions{ SimulateOnlyPromisingActions }, Num_Promising_Actions{ Num_Promising_Actions }
 	{
 
 	}
@@ -21,13 +21,18 @@ namespace DynaPlex::DCL {
 	bool adopt_crn_sh = true;
 	int64_t max_chunk_size_sh = 256;
 	int64_t max_steps_until_completion_expected_sh = 1000000;
-	void SequentialHalving::SetAction(DynaPlex::Trajectory& traj, DynaPlex::NN::Sample& sample, int64_t seed) const
+	void SequentialHalving::SetAction(DynaPlex::Trajectory& traj, DynaPlex::NN::Sample& sample, int64_t seed, const int64_t H, const int64_t M) const
 	{
 		if (!traj.Category.IsAwaitAction())
 			throw DynaPlex::Error("SequentialHalving::SetAction - called for trajectory which is not await_action.");
 
 		auto root_state = traj.GetState()->Clone();
 		auto root_actions = mdp->AllowedActions(root_state);
+
+		if (SimulateOnlyPromisingActions) {
+			root_actions = policy->GetPromisingActions(root_state, Num_Promising_Actions);
+			std::sort(root_actions.begin(), root_actions.end());
+		}
 
 		policy->SetAction({ &traj,1 });
 		auto prescribed_action_initial_policy = traj.NextAction;
@@ -52,14 +57,13 @@ namespace DynaPlex::DCL {
 		int64_t total_budget_used_per_action{ 0 };
 		int64_t seed_keeper{ 0 }; // used when disabling CRN
 		int64_t total_budget = M * root_actions.size();
-		int64_t total_rounds = ceil(log(root_actions.size()) / log(2));
+		int64_t total_rounds = std::ceil(log(root_actions.size()) / log(2));
 		auto competing_actions = root_actions;
 
 		for (int64_t iter = 0; iter < total_rounds; iter++)
 		{
 			//Number of scenarios assigned for each competing_action at this round.
-			int64_t action_budget = std::floor(total_budget / (competing_actions.size() * std::ceil(std::log(root_actions.size()) / std::log(static_cast<double>(2)))));
-			//Number of competing_actions to be kept at the end of this round.
+			int64_t action_budget = std::floor(total_budget / (competing_actions.size() * std::ceil(std::log(root_actions.size()) / std::log(static_cast<double>(2)))));			//Number of competing_actions to be kept at the end of this round.
 			int64_t top_m = std::ceil(competing_actions.size() / static_cast<double>(2));
 
 			//Clearing and reserving resourses.
@@ -76,7 +80,7 @@ namespace DynaPlex::DCL {
 					auto competing_action = competing_actions[action_id];
 					trajectories.push_back(DynaPlex::Trajectory(experiment_information.size()));
 					int64_t traj_seed = adopt_crn_sh ? (total_budget_used_per_action + replication) : seed_keeper + experiment_information.size() + 1;
-					trajectories.back().RNGProvider.SeedEventStreams(false,rng_seed,seed, traj_seed);
+					trajectories.back().RNGProvider.SeedEventStreams(false, rng_seed, seed, traj_seed);
 					trajectories.back().NextAction = competing_action;
 					experiment_information.push_back(DynaPlex::DCL::experiment_info(action_id, replication));
 				}
@@ -205,8 +209,7 @@ namespace DynaPlex::DCL {
 				sample.sample_number = seed;
 				sample.action_label = traj.NextAction;
 				sample.cost_improvement.reserve(root_actions.size());
-				sample.q_hat_vec.reserve(root_actions.size());
-				sample.probabilities.reserve(root_actions.size());
+				sample.simulated_actions.reserve(root_actions.size());
 				sample.q_hat = best_reward * objective;
 
 				int64_t best_action_id = 0;
@@ -223,18 +226,15 @@ namespace DynaPlex::DCL {
 				int64_t least_action_budget = floor(total_budget / (root_actions.size() * ceil(log(root_actions.size()) / log(static_cast<double>(2)))));
 				if (least_action_budget > 1) {
 					comp.ComputeZstatistics(best_action_id);
-					comp.ComputeProbabilities(ValueBasedProbability);
 				}
 				else {
-					comp.ComputeProbabilities(false);
 					sample.z_stat = 0.0;
 				}
 
 				double zValueForBestAlternative = 100.0;
 				for (int64_t action_id = 0; action_id < root_actions.size(); action_id++) {
 					sample.cost_improvement.push_back(comp.mean(action_id, prescribed_action_initial_policy, true) * objective);
-					sample.q_hat_vec.push_back(comp.mean(action_id) * objective);
-					sample.probabilities.push_back(comp.GetProbability(action_id));
+					sample.simulated_actions.push_back(root_actions[action_id]);
 					if (action_id != best_action_id && least_action_budget > 1)
 					{
 						double zValue = comp.GetZstatistic(action_id);

@@ -39,6 +39,7 @@ namespace DynaPlex {
 
         void SetAction(std::span<Trajectory> trajectories) const override;
 
+        std::vector<int64_t> GetPromisingActions(const DynaPlex::dp_State& dp_state, int64_t num_actions) const override;
 
     };
 

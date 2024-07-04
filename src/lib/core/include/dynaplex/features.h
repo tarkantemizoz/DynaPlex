@@ -1,6 +1,7 @@
 #pragma once
 #include <span>
 #include <vector>
+#include <deque>
 #include <stdexcept>
 #include "dynaplex/error.h"
 

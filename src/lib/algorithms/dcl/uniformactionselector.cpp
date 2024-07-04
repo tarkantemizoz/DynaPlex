@@ -11,8 +11,8 @@ namespace DynaPlex::DCL {
 		int64_t experiment_number;
 	};
 
-	UniformActionSelector::UniformActionSelector(int64_t rng_seed, int64_t H, int64_t M, DynaPlex::MDP& mdp, DynaPlex::Policy& policy)
-		: rng_seed{ rng_seed }, H{ H }, M{ M }, mdp{ mdp }, policy{ policy }
+	UniformActionSelector::UniformActionSelector(int64_t rng_seed, DynaPlex::MDP& mdp, DynaPlex::Policy& policy, bool SimulateOnlyPromisingActions, int64_t Num_Promising_Actions)
+		: rng_seed{ rng_seed }, mdp{ mdp }, policy{ policy }, SimulateOnlyPromisingActions{ SimulateOnlyPromisingActions }, Num_Promising_Actions{ Num_Promising_Actions }
 	{
 
 	}
@@ -20,13 +20,18 @@ namespace DynaPlex::DCL {
 	bool adopt_crn = true;
 	int64_t max_chunk_size = 256;
 	int64_t max_steps_until_completion_expected = 1000000;
-	void UniformActionSelector::SetAction(DynaPlex::Trajectory& traj, DynaPlex::NN::Sample& sample, int64_t seed) const
+	void UniformActionSelector::SetAction(DynaPlex::Trajectory& traj, DynaPlex::NN::Sample& sample, int64_t seed, const int64_t H, const int64_t M) const
 	{
 		if (!traj.Category.IsAwaitAction())
 			throw DynaPlex::Error("UniformActionSelector::SetAction - called for trajectory which is not await_action.");
 
 		auto root_state = traj.GetState()->Clone();
 		auto root_actions = mdp->AllowedActions(root_state);
+
+		if (SimulateOnlyPromisingActions) {
+			root_actions = policy->GetPromisingActions(root_state, Num_Promising_Actions);
+			std::sort(root_actions.begin(), root_actions.end());
+		}
 
 		policy->SetAction({ &traj,1 });
 		auto prescribed_action_initial_policy = traj.NextAction;
@@ -55,7 +60,7 @@ namespace DynaPlex::DCL {
 				auto root_action = root_actions[action_id];
 				trajectories.emplace_back(experiment_information.size());
 				int64_t traj_seed = adopt_crn ? replication : experiment_information.size() + 1;
-				trajectories.back().RNGProvider.SeedEventStreams(false, rng_seed,seed, traj_seed);
+				trajectories.back().RNGProvider.SeedEventStreams(false, rng_seed, seed, traj_seed);
 				trajectories.back().NextAction = root_action;
 				experiment_information.emplace_back(action_id, replication);
 			}
@@ -166,24 +171,20 @@ namespace DynaPlex::DCL {
 		sample.sample_number = seed;
 		sample.action_label = traj.NextAction;
 		sample.cost_improvement.reserve(root_actions.size());
-		sample.q_hat_vec.reserve(root_actions.size());
-		sample.probabilities.reserve(root_actions.size());
+		sample.simulated_actions.reserve(root_actions.size());
 		sample.q_hat = best_reward * objective;
 
 		bool ValueBasedProbability = true;
 		if (M > 1){
 			comp.ComputeZstatistics(best_action_id);
-			comp.ComputeProbabilities(ValueBasedProbability);
 		}
 		else{
-			comp.ComputeProbabilities(false);
 			sample.z_stat = 0.0;
 		}
 		double zValueForBestAlternative = 100.0;
 		for (int64_t action_id = 0; action_id < root_actions.size(); action_id++) {
 			sample.cost_improvement.push_back(comp.mean(action_id, prescribed_action_initial_policy) * objective);
-			sample.q_hat_vec.push_back(comp.mean(action_id) * objective);
-			sample.probabilities.push_back(comp.GetProbability(action_id));
+			sample.simulated_actions.push_back(root_actions[action_id]);
 			if (action_id != best_action_id && M > 1)
 			{
 				double zValue = comp.GetZstatistic(action_id);

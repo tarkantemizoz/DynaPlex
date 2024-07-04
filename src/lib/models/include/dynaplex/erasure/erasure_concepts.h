@@ -27,11 +27,6 @@ namespace DynaPlex::Erasure
 		{ mdp.GetState(vars) } -> std::same_as<t_State>;
 	};
 
-	template <typename t_MDP, typename t_State, typename t_RNG>
-	concept HasModifyStateWithRNG = requires(const t_MDP & mdp, t_State & state, t_RNG & rng) {
-		{ mdp.ModifyStateWithEvent(state, rng) } -> std::same_as<double>;
-	};
-
 	template <typename t_MDP, typename t_State, typename t_Event>
 	concept HasModifyStateWithEvent = requires(const t_MDP & mdp, t_State & state, const t_Event & event) {
 		{ mdp.ModifyStateWithEvent(state, event) } -> std::same_as<double>;
@@ -53,6 +48,11 @@ namespace DynaPlex::Erasure
 	};
 
 	template<typename t_Policy, typename t_State>
+	concept HasGetActionState = requires(const t_Policy mdp, t_State & state) {
+		{ mdp.GetActionState(state) } -> std::same_as<int64_t>;
+	};
+
+	template<typename t_Policy, typename t_State>
 	concept HasGetAction = requires(const t_Policy mdp, const t_State & state) {
 		{ mdp.GetAction(state) } -> std::same_as<int64_t>;
 	};
@@ -60,6 +60,36 @@ namespace DynaPlex::Erasure
 	template<typename t_Policy, typename t_State, typename t_MDP>
 	concept HasGetActionRNG = requires(const t_Policy mdp, const t_State & state, t_MDP & rng) {
 		{ mdp.GetAction(state, rng) } -> std::same_as<int64_t>;
+	};
+
+	template<typename t_Policy, typename t_State>
+	concept HasGetPromisingActions = requires(const t_Policy mdp, const t_State & state, int64_t num_actions) {
+		{ mdp.GetPromisingActions(state, num_actions) } -> std::same_as<std::vector<int64_t>>;
+	};
+
+	template<typename t_MDP, typename t_State>
+	concept HasCommunicateMDP = requires(const t_MDP & mdp, t_State & state) {
+		{ mdp.CommunicateWithMDP(state) } -> std::same_as<void>;
+	};
+
+	template<typename t_MDP, typename t_State>
+	concept HasStateDependendentL = requires(const t_MDP & mdp, const t_State & state) {
+		{ mdp.GetL(state) } -> std::same_as<int64_t>;
+	};
+
+	template<typename t_MDP, typename t_State>
+	concept HasStateDependendentRestartCounter = requires(const t_MDP & mdp, const t_State & state) {
+		{ mdp.GetReinitiateCounter(state) } -> std::same_as<int64_t>;
+	};
+
+	template<typename t_MDP, typename t_State>
+	concept HasStateDependendentH = requires(const t_MDP & mdp, const t_State & state) {
+		{ mdp.GetH(state) } -> std::same_as<int64_t>;
+	};
+
+	template<typename t_MDP, typename t_State>
+	concept HasStateDependendentM = requires(const t_MDP & mdp, const t_State & state) {
+		{ mdp.GetM(state) } -> std::same_as<int64_t>;
 	};
 
 	template <typename t_MDP>
@@ -78,18 +108,6 @@ namespace DynaPlex::Erasure
 		typename t_MDP::Event;
 	};
 
-	template <typename T, bool HasEvent>
-	struct ConditionalEvent;
-
-	template <typename T>
-	struct ConditionalEvent<T, true> {
-		using type = typename T::Event;
-	};
-	//default to event being int64_t
-	template <typename T>
-	struct ConditionalEvent<T, false> {
-		using type = int64_t;
-	};
 
 	template<typename t_MDP>
 	concept HasState = requires{

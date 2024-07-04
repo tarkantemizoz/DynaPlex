@@ -25,8 +25,8 @@ namespace DynaPlex
 		virtual const DynaPlex::VarGroup& GetConfig() const = 0;
 		/// sets the actions if all trajectories in the span/vector have category IsAwaitAction(), throws otherwise.
 		virtual void SetAction(std::span<Trajectory>) const = 0;
-
-
+		// returns 'num_actions' many promising actions based on the scoring scheme of the underlying policy.
+		virtual std::vector<int64_t> GetPromisingActions(const DynaPlex::dp_State& dp_state, int64_t num_actions) const = 0;
 	};
 	using Policy = std::shared_ptr<PolicyInterface>;
 }//namespace DynaPlex

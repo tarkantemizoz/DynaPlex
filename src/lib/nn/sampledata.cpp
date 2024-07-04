@@ -33,7 +33,6 @@ namespace DynaPlex::NN
 		std::vector<double> levels = { 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
 		std::vector<size_t> counts(levels.size(), 0);
 		double avgMU = 0.0;
-		double avgMUsamp = 0.0;
 
 		for (auto& sample : Samples)
 		{
@@ -89,10 +88,9 @@ namespace DynaPlex::NN
 			vg.Get("action_label", sample.action_label);
 			vg.Get("sample_number", sample.sample_number);
 			vg.Get("q_hat", sample.q_hat);
-			vg.Get("q_hat_vec", sample.q_hat_vec);
 			vg.Get("z_stat", sample.z_stat);
 			vg.Get("cost_improvement", sample.cost_improvement);
-			vg.Get("probabilities", sample.probabilities);
+			vg.Get("simulated_actions", sample.simulated_actions);
 		}
 
 		return result;

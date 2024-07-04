@@ -1,8 +1,8 @@
 #include "dynaplex/trajectory.h"
 namespace DynaPlex {
 	
-	Trajectory::Trajectory(int64_t externalIndex):
-	    NextAction{},
+	Trajectory::Trajectory(int64_t externalIndex) :
+		NextAction{},
 		Category{},
 		PeriodCount{ 0 },
 		EffectiveDiscountFactor{ 1.0 },
@@ -24,7 +24,6 @@ namespace DynaPlex {
 		state = std::move(State);
 		Reset();
 	}
-
 
 	
 }

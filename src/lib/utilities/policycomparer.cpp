@@ -157,15 +157,15 @@ namespace DynaPlex::Utilities {
 		return Compare(polVec)[0];		
 	}
 
-	std::vector<VarGroup> PolicyComparer::Compare(DynaPlex::Policy first, DynaPlex::Policy second, int64_t index_of_benchmark) const {
+	std::vector<VarGroup> PolicyComparer::Compare(DynaPlex::Policy first, DynaPlex::Policy second, int64_t index_of_benchmark, bool compute_gap, bool rewardProblem) const {
 		std::vector<DynaPlex::Policy> polVec{};
 		polVec.reserve(2);
 		polVec.push_back(first);
 		polVec.push_back(second);
-		return Compare(polVec, index_of_benchmark);
+		return Compare(polVec, index_of_benchmark, compute_gap, rewardProblem);
 	}
 
-	std::vector<VarGroup> PolicyComparer::Compare(std::vector<DynaPlex::Policy> policies, int64_t index_of_benchmark) const {
+	std::vector<VarGroup> PolicyComparer::Compare(std::vector<DynaPlex::Policy> policies, int64_t index_of_benchmark, bool compute_gap, bool rewardProblem) const {
 		std::vector<std::vector<double>> nestedReturnValues{};
 		nestedReturnValues.reserve(policies.size());
 		int64_t minusone = -1, size = policies.size();
@@ -196,8 +196,20 @@ namespace DynaPlex::Utilities {
 			auto& policy = policies[i];
 			DynaPlex::VarGroup forPolicy{};
 			forPolicy.Add("policy", policy->GetConfig());
-			forPolicy.Add("mean", comparison.mean(i,index_of_benchmark));
-			forPolicy.Add("error", comparison.standardError(i,index_of_benchmark));
+			forPolicy.Add("mean", comparison.mean(i));
+			forPolicy.Add("error", comparison.standardError(i));
+			if (i > minusone)
+			{
+				forPolicy.Add("mean_difference", comparison.mean(i, index_of_benchmark));
+				forPolicy.Add("error_difference", comparison.standardError(i, index_of_benchmark));
+			}
+			if (compute_gap)
+			{
+				if (!rewardProblem)
+					forPolicy.Add("mean_gap", comparison.mean(i, index_of_benchmark) / comparison.mean(index_of_benchmark) * 100);
+				else
+					forPolicy.Add("mean_gap", comparison.mean(index_of_benchmark, i) / comparison.mean(index_of_benchmark) * 100);
+			}
 			if (i == index_of_benchmark)
 			{
 				forPolicy.Add("benchmark", "yes");
