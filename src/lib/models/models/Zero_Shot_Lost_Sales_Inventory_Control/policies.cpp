@@ -59,12 +59,7 @@ namespace DynaPlex::Models {
 
 		int64_t GreedyCappedBaseStockPolicy::GetAction(const MDP::State& state) const
 		{
-			int64_t action = state.OrderConstraint;
-			if (action < 0)
-			{
-				action = 0;
-			}
-			return action;
+			return state.OrderConstraint;
 		}
 	}
 }

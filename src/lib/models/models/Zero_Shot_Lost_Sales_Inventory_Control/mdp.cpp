@@ -257,24 +257,15 @@ namespace DynaPlex::Models {
 		}
 
 		bool MDP::IsAllowedAction(const State& state, int64_t action) const {
-			if (state.order_initializationPhase > 0) 
-				return action == state.OrderConstraint;	
-			else 
 				return action <= state.OrderConstraint;
 		}
 
 		MDP::Event MDP::GetEvent(const State& state, RNG& rng) const {
 			double randomValue = rng.genUniform();
-			double cumulativeProbability = 0.0;
-			int64_t demand = state.max_true_demand[state.period];
-			std::vector<double> probs = state.true_demand_probs[state.period];
-			for (size_t i = 0; i < probs.size(); i++) {
-				cumulativeProbability += probs[i];
-				if (randomValue < cumulativeProbability) {
-					demand = state.min_true_demand[state.period] + static_cast<int64_t>(i);
-					break;
-				}
-			}
+			// Use binary search on the cumulativePMF
+			auto it = std::lower_bound(state.cumulativePMFs[state.period].begin(), state.cumulativePMFs[state.period].end(), randomValue);
+			size_t index = std::distance(state.cumulativePMFs[state.period].begin(), it);
+			int64_t demand = state.min_true_demand[state.period] + static_cast<int64_t>(index);
 
 			if (state.stochasticLeadtimes) {
 				std::vector<double> arrival_prob{};
@@ -1047,15 +1038,14 @@ namespace DynaPlex::Models {
 				if (!state.collectStatistics) {
 					state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
 					state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];
-					//state.fractiles = state.cycle_fractiles[state.period];
 				}
 			}
 
 			if (state.collectStatistics) {
 				if (state.censoredLeadtime && state.orders_received > orders_received)
 					UpdateLeadTimeStatistics(state);
-				if (state.censoredDemand && state.order_initializationPhase == 0)
-					UpdateDemandStatistics(state, uncensored, demand);
+				if (state.censoredDemand && state.order_initializationPhase == 0) 
+					UpdateDemandStatistics(state, uncensored, demand); // Call Kaplan - Meier Estimator			
 				if (state.order_initializationPhase == 0 || state.orders_received > orders_received) {
 					UpdateOrderLimits(state);
 				}
@@ -1063,7 +1053,6 @@ namespace DynaPlex::Models {
 					if (!state.censoredDemand && state.demand_cycles.size() > 1) {
 						state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
 						state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];
-						//state.fractiles = state.cycle_fractiles[state.period];
 					}
 					state.order_initializationPhase--;
 					if (state.censoredDemand && state.orders_received > orders_received)
@@ -1160,10 +1149,11 @@ namespace DynaPlex::Models {
 		}
 
 		void MDP::UpdateOrderLimits(State& state) const {
-			std::vector<DiscreteDist> dist_vec_over_leadtime;
-			dist_vec_over_leadtime.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
+			std::vector<double> probs_vec(state.estimated_leadtime_probs.begin() + state.estimated_min_leadtime, state.estimated_leadtime_probs.begin() + state.estimated_max_leadtime + 1);
 			std::vector<DiscreteDist> dist_vec;
 			dist_vec.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
+			std::vector<DiscreteDist> dist_vec_over_leadtime;
+			dist_vec_over_leadtime.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
 			for (int64_t j = state.estimated_min_leadtime; j <= state.estimated_max_leadtime; j++)
 			{
 				auto DemOverLeadtime = DiscreteDist::GetZeroDist();
@@ -1178,14 +1168,10 @@ namespace DynaPlex::Models {
 				dist_vec.push_back(dist_on_leadtime);
 				dist_vec_over_leadtime.push_back(DemOverLeadtime);
 			}
-			std::vector<double> probs_vec(state.estimated_leadtime_probs.begin() + state.estimated_min_leadtime, state.estimated_leadtime_probs.begin() + state.estimated_max_leadtime + 1);
-			auto DummyDemOverLeadtime = DiscreteDist::MultipleMix(dist_vec_over_leadtime, probs_vec);
 			auto DummyDemOnLeadtime = DiscreteDist::MultipleMix(dist_vec, probs_vec);
+			auto DummyDemOverLeadtime = DiscreteDist::MultipleMix(dist_vec_over_leadtime, probs_vec);
 			state.MaxOrderSize = std::min(DummyDemOnLeadtime.Fractile(state.p / (state.p + h)), state.MaxOrderSize_Limit);
 			state.MaxSystemInv = std::min(DummyDemOverLeadtime.Fractile(state.p / (state.p + h)), MaxSystemInv);
-			//for (int64_t s = 0; s < fractiles.size(); s++) {
-			//	state.fractiles[s] = DummyDemOnLeadtime.Fractile(fractiles[s]);
-			//}
 		}
 
 		void MDP::UpdateLeadTimeStatistics(State& state) const {
@@ -1212,6 +1198,7 @@ namespace DynaPlex::Models {
 			for (int64_t i = 0; i <= max_leadtime; i++) {
 				state.estimated_leadtime_probs[i] = static_cast<double>(dummy_past_leadtimes[i]) / static_cast<double>(dummy_orders_received);
 			}
+
 			bool found_min = false;
 			double total_prob = 0.0;
 			for (int64_t i = 0; i <= max_leadtime; i++) {
@@ -1226,9 +1213,9 @@ namespace DynaPlex::Models {
 					break;
 				}
 			}
-		}
+		} 
 
-		void MDP::UpdateDemandStatistics(State& state, bool uncensored, int64_t newObs) const {
+		void MDP::UpdateDemandStatistics(State& state, bool uncensored, int64_t newObs) const { // Kaplan - Meier Estimator
 			int64_t current_cyclePeriod = 0;
 			if (state.demand_cycles.size() > 1) {
 				int64_t old_period = (state.period == 0 ? (state.demand_cycles.size() - 1) : (state.period - 1));
@@ -1401,7 +1388,6 @@ namespace DynaPlex::Models {
 			else {
 				features.Add(state.mean_cycle_demand.front());
 				features.Add(state.std_cycle_demand.front());
-				//features.Add(state.fractiles);
 			}
 			if (train_random_yield) {
 				if(!include_all_features)
@@ -1422,6 +1408,7 @@ namespace DynaPlex::Models {
 			state.censoredRandomYield = false;
 			std::vector<double> mean_true_demand;
 			std::vector<double> stdev_true_demand;
+			std::vector<double> leadtime_true_probs;
 
 			if (evaluate) {
 				state.demand_cycles = demand_cycles;
@@ -1429,11 +1416,11 @@ namespace DynaPlex::Models {
 				stdev_true_demand = stdDemand;
 				state.mean_cycle_demand = mean_demand;
 				state.std_cycle_demand = stdDemand;
-				state.leadtime_probs = leadtime_probs;
+				leadtime_true_probs = leadtime_probs;
 				bool found_min = false;
 				double total_prob = 0.0;
 				for (int64_t i = 0; i <= max_leadtime; i++) {
-					double prob = state.leadtime_probs[i];
+					double prob = leadtime_probs[i];
 					total_prob += prob;
 					if (!found_min && prob > 0.0) {
 						state.min_leadtime = i;
@@ -1444,7 +1431,7 @@ namespace DynaPlex::Models {
 						break;
 					}
 				}
-				state.estimated_leadtime_probs = state.leadtime_probs;
+				state.estimated_leadtime_probs = leadtime_true_probs;
 				state.estimated_max_leadtime = state.max_leadtime;
 				state.estimated_min_leadtime = state.min_leadtime;
 
@@ -1462,7 +1449,7 @@ namespace DynaPlex::Models {
 						state.cumulative_demands.reserve(state.demand_cycles.size());
 						state.censor_indicator.reserve(state.demand_cycles.size());
 						for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
-							state.mean_cycle_demand[i] = 0.0;
+							state.mean_cycle_demand[i] = max_demand;
 							state.std_cycle_demand[i] = 0.0;
 							state.periodCount.push_back(0);
 							state.past_demands.push_back({});
@@ -1498,8 +1485,8 @@ namespace DynaPlex::Models {
 					state.max_leadtime = static_cast<int64_t>(std::floor(rng.genUniform() * (max_leadtime - state.min_leadtime + 1))) + state.min_leadtime;
 				else
 					state.max_leadtime = state.min_leadtime;
-				state.leadtime_probs = SampleLeadTimeDistribution(rng, state.min_leadtime, state.max_leadtime);
-				state.estimated_leadtime_probs = state.leadtime_probs;
+				leadtime_true_probs = SampleLeadTimeDistribution(rng, state.min_leadtime, state.max_leadtime);
+				state.estimated_leadtime_probs = leadtime_true_probs;
 				state.estimated_max_leadtime = state.max_leadtime;
 				state.estimated_min_leadtime = state.min_leadtime;
 				int64_t num_cycles = 1;
@@ -1553,8 +1540,8 @@ namespace DynaPlex::Models {
 				if (state.order_crossover) {
 					double total_prob_v1 = 1.0;
 					for (int64_t i = 0; i < state.max_leadtime; i++) {
-						state.cumulative_leadtime_probs[i] = state.leadtime_probs[i] / total_prob_v1;
-						total_prob_v1 -= state.leadtime_probs[i];
+						state.cumulative_leadtime_probs[i] = leadtime_true_probs[i] / total_prob_v1;
+						total_prob_v1 -= leadtime_true_probs[i];
 					}
 				}
 				else {
@@ -1567,8 +1554,8 @@ namespace DynaPlex::Models {
 					}
 					else {
 						for (int64_t i = 0; i < state.max_leadtime; i++) {
-							state.cumulative_leadtime_probs[i] = state.leadtime_probs[i] + total_prob_v1;
-							total_prob_v1 += state.leadtime_probs[i];
+							state.cumulative_leadtime_probs[i] = leadtime_true_probs[i] + total_prob_v1;
+							total_prob_v1 += leadtime_true_probs[i];
 						}
 						double total_probs = 0.0;
 						for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
@@ -1611,14 +1598,32 @@ namespace DynaPlex::Models {
 			state.state_vector = queue;
 			state.total_inv = queue.sum();
 
-			state.true_demand_probs.reserve(state.demand_cycles.size());
+			std::vector<std::vector<double>> true_demand_probs;
+			true_demand_probs.reserve(state.demand_cycles.size());
 			state.min_true_demand.reserve(state.demand_cycles.size());
-			state.max_true_demand.reserve(state.demand_cycles.size());
+			state.cumulativePMFs.reserve(state.demand_cycles.size());
+			for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
+				DynaPlex::DiscreteDist state_demand_dist = DiscreteDist::GetAdanEenigeResingDist(mean_true_demand[i], stdev_true_demand[i]);
+				state.min_true_demand.push_back(state_demand_dist.Min());
+				std::vector<double> probs;
+				probs.reserve(state_demand_dist.DistinctValueCount());
+				std::vector<double> cumul_probs;
+				cumul_probs.reserve(state_demand_dist.DistinctValueCount());
+				double sum = 0.0;
+				for (const auto& [qty, prob] : state_demand_dist) {
+					probs.push_back(prob);
+					sum += prob;
+					cumul_probs.push_back(sum);
+				}
+				true_demand_probs.push_back(probs);
+				state.cumulativePMFs.push_back(cumul_probs);
+			}
+
+			DynaPlex::DiscreteDist edge_dist = DiscreteDist::GetConstantDist(static_cast<int64_t>(std::ceil(max_demand)));
 			if (state.collectStatistics) {
 				state.cycle_probs.reserve(state.demand_cycles.size());
 				state.cycle_min_demand.reserve(state.demand_cycles.size());
 				if (state.censoredDemand) {
-					DynaPlex::DiscreteDist edge_dist = DiscreteDist::GetAdanEenigeResingDist(max_demand, max_demand * 2);
 					int64_t edge_min = edge_dist.Min();
 					std::vector<double> edge_probs;
 					edge_probs.reserve(edge_dist.DistinctValueCount());
@@ -1630,98 +1635,47 @@ namespace DynaPlex::Models {
 						state.cycle_min_demand.push_back(edge_min);
 					}
 				}
-			}
-			for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
-				DynaPlex::DiscreteDist state_demand_dist = DiscreteDist::GetAdanEenigeResingDist(mean_true_demand[i], stdev_true_demand[i]);
-				state.min_true_demand.push_back(state_demand_dist.Min());
-				state.max_true_demand.push_back(state_demand_dist.Max());
-				std::vector<double> probs;
-				probs.reserve(state_demand_dist.DistinctValueCount());
-				for (const auto& [qty, prob] : state_demand_dist) {
-					probs.push_back(prob);
-				}
-				state.true_demand_probs.push_back(probs);
-				if (state.collectStatistics && !state.censoredDemand) {
-					state.cycle_probs.push_back(probs);
-					state.cycle_min_demand.push_back(state_demand_dist.Min());				
+				else {
+					for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
+						state.cycle_probs.push_back(true_demand_probs[i]);
+						state.cycle_min_demand.push_back(state.min_true_demand[i]);
+					}
 				}
 			}
 
 			state.MaxOrderSize_Limit = 0;
 			std::vector<double> probs_vec(state.estimated_leadtime_probs.begin() + state.estimated_min_leadtime, state.estimated_leadtime_probs.begin() + state.estimated_max_leadtime + 1);
-			if (!state.censoredDemand) {
-				state.cycle_fractiles.reserve(state.demand_cycles.size());
-				state.cycle_MaxOrderSize.reserve(state.demand_cycles.size());
-				state.cycle_MaxSystemInv.reserve(state.demand_cycles.size());
-				for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
-					std::vector<DiscreteDist> dist_vec_over_leadtime;
-					dist_vec_over_leadtime.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
-					std::vector<DiscreteDist> dist_vec;
-					dist_vec.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
-					for (int64_t j = state.estimated_min_leadtime; j <= state.estimated_max_leadtime; j++)
-					{	
-						auto DemOverLeadtime = DiscreteDist::GetZeroDist();
-						for (int64_t k = 0; k < j; k++) {
-							int64_t cyclePeriod = (i + k) % state.demand_cycles.size();
-							DynaPlex::DiscreteDist dist_over_lt = DiscreteDist::GetCustomDist(state.true_demand_probs[cyclePeriod], state.min_true_demand[cyclePeriod]);
-							DemOverLeadtime = DemOverLeadtime.Add(dist_over_lt);
-						}
-						int64_t cyclePeriod_on_leadtime = (i + j) % state.demand_cycles.size();
-						DynaPlex::DiscreteDist dist_on_leadtime = DiscreteDist::GetCustomDist(state.true_demand_probs[cyclePeriod_on_leadtime], state.min_true_demand[cyclePeriod_on_leadtime]);
-						DemOverLeadtime = DemOverLeadtime.Add(dist_on_leadtime);
-						dist_vec.push_back(dist_on_leadtime);
-						dist_vec_over_leadtime.push_back(DemOverLeadtime);
-					}
-					auto DummyDemOverLeadtime = DiscreteDist::MultipleMix(dist_vec_over_leadtime, probs_vec);
-					auto DummyDemOnLeadtime = DiscreteDist::MultipleMix(dist_vec, probs_vec);
-					int64_t OrderSize = DummyDemOnLeadtime.Fractile(state.p / (state.p + h));
-					state.MaxOrderSize_Limit = std::max(state.MaxOrderSize_Limit, OrderSize);
-					state.cycle_MaxOrderSize.push_back(std::min(MaxOrderSize, OrderSize));
-					state.cycle_MaxSystemInv.push_back(std::min(MaxSystemInv, DummyDemOverLeadtime.Fractile(state.p / (state.p + h))));
-					//std::vector<int64_t> _fractiles(fractiles.size(), 0);
-					//for (int64_t s = 0; s < fractiles.size(); s++) {
-					//	_fractiles[s] = DummyDemOnLeadtime.Fractile(fractiles[s]);
-					//}
-					//state.cycle_fractiles.push_back(_fractiles);
-				}
-				state.MaxOrderSize_Limit = std::min(MaxOrderSize, state.MaxOrderSize_Limit);
-				state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
-				state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];
-				//state.fractiles = state.cycle_fractiles[state.period];
-			}
-			else {
-				double mean = rng.genUniform() * (max_demand - min_demand) + min_demand;
-				double min_var = DiscreteDist::LeastVarianceRequiredForAERFit(mean);
-				double min_std = std::sqrt(min_var);
-				double stdev = rng.genUniform()* (mean * 2.0 - min_std) + min_std;
-				DynaPlex::DiscreteDist edge_dist = DiscreteDist::GetAdanEenigeResingDist(max_demand, max_demand * 2);
-				//DynaPlex::DiscreteDist edge_dist = DiscreteDist::GetAdanEenigeResingDist(mean, stdev);
-				std::vector<DiscreteDist> dist_vec_over_leadtime;
-				dist_vec_over_leadtime.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
+			state.cycle_MaxOrderSize.reserve(state.demand_cycles.size());
+			state.cycle_MaxSystemInv.reserve(state.demand_cycles.size());
+			for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
 				std::vector<DiscreteDist> dist_vec;
 				dist_vec.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
+				std::vector<DiscreteDist> dist_vec_over_leadtime;
+				dist_vec_over_leadtime.reserve(state.estimated_max_leadtime - state.estimated_min_leadtime + 1);
 				for (int64_t j = state.estimated_min_leadtime; j <= state.estimated_max_leadtime; j++)
-				{
+				{	
 					auto DemOverLeadtime = DiscreteDist::GetZeroDist();
 					for (int64_t k = 0; k < j; k++) {
-						DemOverLeadtime = DemOverLeadtime.Add(edge_dist);
+						int64_t cyclePeriod = (i + k) % state.demand_cycles.size();
+						DynaPlex::DiscreteDist dist_over_lt = state.censoredDemand ? edge_dist : DiscreteDist::GetCustomDist(true_demand_probs[cyclePeriod], state.min_true_demand[cyclePeriod]);
+						DemOverLeadtime = DemOverLeadtime.Add(dist_over_lt);
 					}
-					DemOverLeadtime = DemOverLeadtime.Add(edge_dist);
-					dist_vec.push_back(edge_dist);
+					int64_t cyclePeriod_on_leadtime = (i + j) % state.demand_cycles.size();
+					DynaPlex::DiscreteDist dist_on_leadtime = state.censoredDemand ? edge_dist : DiscreteDist::GetCustomDist(true_demand_probs[cyclePeriod_on_leadtime], state.min_true_demand[cyclePeriod_on_leadtime]);
+					DemOverLeadtime = DemOverLeadtime.Add(dist_on_leadtime);
+					dist_vec.push_back(dist_on_leadtime);
 					dist_vec_over_leadtime.push_back(DemOverLeadtime);
 				}
 				auto DummyDemOverLeadtime = DiscreteDist::MultipleMix(dist_vec_over_leadtime, probs_vec);
 				auto DummyDemOnLeadtime = DiscreteDist::MultipleMix(dist_vec, probs_vec);
-				state.MaxOrderSize = std::min(MaxOrderSize, DummyDemOnLeadtime.Fractile(state.p / (state.p + h)));
-				state.MaxOrderSize_Limit = state.MaxOrderSize;
-				state.MaxOrderSize = 12;
-				state.MaxSystemInv = std::min(MaxSystemInv, DummyDemOverLeadtime.Fractile(state.p / (state.p + h)));
-				//std::vector<int64_t> _fractiles(fractiles.size(), 0);
-				//state.fractiles = _fractiles;
-				//for (int64_t s = 0; s < fractiles.size(); s++) {
-				//	state.fractiles[s] = DummyDemOnLeadtime.Fractile(fractiles[s]);
-				//}
+				int64_t OrderSize = std::min(DummyDemOnLeadtime.Fractile(state.p / (state.p + h)), MaxOrderSize);
+				state.MaxOrderSize_Limit = std::max(state.MaxOrderSize_Limit, OrderSize);
+				state.cycle_MaxOrderSize.push_back(OrderSize);
+				state.cycle_MaxSystemInv.push_back(std::min(MaxSystemInv, DummyDemOverLeadtime.Fractile(state.p / (state.p + h))));
 			}
+			state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
+			state.MaxOrderSize_Limit = state.censoredDemand ? MaxOrderSize : std::min(MaxOrderSize, state.MaxOrderSize_Limit);		
+			state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];
 			state.OrderConstraint = std::max(static_cast<int64_t>(0), std::min(state.MaxSystemInv - state.total_inv, state.MaxOrderSize));
 
 			if (train_random_yield) {
@@ -1964,8 +1918,9 @@ namespace DynaPlex::Models {
 					}
 				}
 				if (include_all_features) {
+					state.random_yield_nn_features.reserve(MaxOrderSize + 1);
+					state.random_yield_nn_features.push_back(0.0);
 					std::vector<double> random_yield_features(MaxOrderSize + 1, 1.0);
-					random_yield_features[0] = 0.0;
 					if (include_allowed) {
 						if (state.order_initializationPhase > 0) {
 							for (int64_t i = 1; i <= MaxOrderSize; i++) {
@@ -1991,7 +1946,7 @@ namespace DynaPlex::Models {
 					}
 					else {
 						for (int64_t i = 1; i <= state.MaxOrderSize_Limit; i++) {
-							random_yield_features[i] = state.random_yield_features[i];
+							random_yield_features.push_back(state.random_yield_features[i]);
 						}
 						for (int64_t i = state.MaxOrderSize_Limit + 1; i <= MaxOrderSize; i++) {
 							random_yield_features[i] = 0.0;
@@ -2000,19 +1955,16 @@ namespace DynaPlex::Models {
 					state.random_yield_nn_features = random_yield_features;
 				}
 				else {			
-					std::vector<double> random_yield_features(randomYield_features_size, 1.0);
+					state.random_yield_nn_features.reserve(randomYield_features_size);
 					double size = static_cast<double>(state.OrderConstraint) / randomYield_features_size;
 					int64_t currentIndex = 0;
 					for (int64_t i = 0; i < randomYield_features_size; ++i) {
-						if (i < state.OrderConstraint % randomYield_features_size) {
-							currentIndex += std::ceil(size);
-						}
-						else {
-							currentIndex += std::floor(size);
-						}
-						random_yield_features[i] = state.random_yield_features[currentIndex];
+						if (i < state.OrderConstraint % randomYield_features_size) 
+							currentIndex += static_cast<int64_t>(std::ceil(size));					
+						else 
+							currentIndex += static_cast<int64_t>(std::floor(size));
+						state.random_yield_nn_features.push_back(state.random_yield_features[currentIndex]);
 					}
-					state.random_yield_nn_features = random_yield_features;
 				}
 			}
 

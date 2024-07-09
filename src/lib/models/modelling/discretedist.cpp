@@ -785,49 +785,37 @@ namespace DynaPlex
 		return std::sqrt(Variance());
 	}
 
+
+
 	int64_t DiscreteDist::GetSample(DynaPlex::RNG& rng) const {
 		// Generate a uniform random number between 0 and 1
 		double randomValue = rng.genUniform();
-
-		if (optimizedForSampling) {
-			// Use binary search on the cumulativePMF
-			auto it = std::lower_bound(cumulativePMF.begin(), cumulativePMF.end(), randomValue);
-			size_t index = std::distance(cumulativePMF.begin(), it);
-			return min + static_cast<int64_t>(index);
-		}
-		else {
-			double cumulativeProbability = 0.0;
-			for (size_t i = 0; i < translatedPMF.size(); i++) {
-				cumulativeProbability += translatedPMF[i];
-				if (randomValue < cumulativeProbability) {
-					return min + static_cast<int64_t>(i);
-				}
+		double cumulativeProbability = 0.0;
+		for (size_t i = 0; i < translatedPMF.size(); i++) {
+			cumulativeProbability += translatedPMF[i];
+			if (randomValue < cumulativeProbability) {
+				return min + static_cast<int64_t>(i);
 			}
-			// This should technically never be reached if probabilities sum to 1, 
-			// but it handles potential numerical inaccuracies.
-			return Max();
 		}
+
+		// This should technically never be reached if probabilities sum to 1, 
+		// but it handles potential numerical inaccuracies.
+		return Max();
 	}
 
 	int64_t DiscreteDist::GetSampleFromProb(double randomValue) const {
-		if (optimizedForSampling) {
-			// Use binary search on the cumulativePMF
-			auto it = std::lower_bound(cumulativePMF.begin(), cumulativePMF.end(), randomValue);
-			size_t index = std::distance(cumulativePMF.begin(), it);
-			return min + static_cast<int64_t>(index);
-		}
-		else {
-			double cumulativeProbability = 0.0;
-			for (size_t i = 0; i < translatedPMF.size(); i++) {
-				cumulativeProbability += translatedPMF[i];
-				if (randomValue < cumulativeProbability) {
-					return min + static_cast<int64_t>(i);
-				}
+		// Generate a uniform random number between 0 and 1
+		double cumulativeProbability = 0.0;
+		for (size_t i = 0; i < translatedPMF.size(); i++) {
+			cumulativeProbability += translatedPMF[i];
+			if (randomValue < cumulativeProbability) {
+				return min + static_cast<int64_t>(i);
 			}
-			// This should technically never be reached if probabilities sum to 1, 
-			// but it handles potential numerical inaccuracies.
-			return Max();
 		}
+
+		// This should technically never be reached if probabilities sum to 1, 
+		// but it handles potential numerical inaccuracies.
+		return Max();
 	}
 
 	void DiscreteDist::OptimizeForSampling() {

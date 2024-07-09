@@ -463,21 +463,21 @@ void TestAll(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn_num_
 	mdp_config.Set("order_crossover", order_crossover);
 
 	bool DeterministicLeadtime = false;
-	bool randomYield = false;
+	bool randomYield = true;
 
 	instance_config.Add("leadtime_distribution", leadtime_probs);
 	instance_config.Add("order_crossover", order_crossover);
 	instance_config.Add("randomYield", randomYield);
 
-	//mdp_config.Set("randomYield", true);
-	//mdp_config.Set("yield_when_realized", true);
-	//mdp_config.Set("randomYield_case", 1);
-	//mdp_config.Set("min_yield", 0.85);
-	//mdp_config.Add("random_yield_dist",
-	//	DynaPlex::VarGroup({
-	//	{"type", "poisson"},
-	//	{"mean", 10.0}
-	//		}));
+	mdp_config.Set("randomYield", true);
+	mdp_config.Set("yield_when_realized", true);
+	mdp_config.Set("randomYield_case", 1);
+	mdp_config.Set("min_yield", 0.85);
+	mdp_config.Add("random_yield_dist",
+		DynaPlex::VarGroup({
+		{"type", "poisson"},
+		{"mean", 10.0}
+			}));
 	// instance information is set
 
 	mdp_config.Set("returnRewards", false);
@@ -837,7 +837,7 @@ void TrainNetwork() {
 
 	DynaPlex::VarGroup nn_training{
 		{"early_stopping_patience",15},
-		{"mini_batch_size", 1024},
+		{"mini_batch_size", 10},
 		{"max_training_epochs", 100}
 	};
 
@@ -862,7 +862,7 @@ void TrainNetwork() {
 	//std::string id = "lost_sales_all_v2";
 	//std::string id = "lost_sales_cyclic";
 	std::string id = "lost_sales_all_v3";
-	std::string exp_num = "_v65_tsl_tcd";
+	std::string exp_num = "_v66_tsl_tcd_try";
 	std::string loc = "dcl_" + id + exp_num;
 	dp.System() << "Network id:  " << loc << std::endl;
 
@@ -871,11 +871,11 @@ void TrainNetwork() {
 	bool evaluate_all_instances = false;
 	
 	DynaPlex::VarGroup config;
-	config.Add("id", id);
+	config.Add("id", "Zero_Shot_Lost_Sales_Inventory_Control");
 	config.Add("evaluate", false);
 	config.Add("train_stochastic_leadtimes", true);
 	config.Add("train_cyclic_demand", true);
-	config.Add("train_random_yield", false);
+	config.Add("train_random_yield", true);
 	config.Add("discount_factor", 1.0);
 	config.Add("max_demand", 12.0);
 	config.Add("max_p", 100.0);
@@ -883,7 +883,6 @@ void TrainNetwork() {
 	config.Add("max_num_cycles", 7);
 
 	TestAll(config, loc, num_gens);
-
 	if (train) {
 		DynaPlex::MDP mdp = dp.GetMDP(config);
 
@@ -891,7 +890,6 @@ void TrainNetwork() {
 		//std::string loc_old = "dcl_" + id + exp_num_old;
 		//auto path = dp.System().filepath(loc_old, "dcl_gen" + 5);
 		//auto nn_policy = dp.LoadPolicy(mdp, path);
-
 		auto policy = mdp->GetPolicy("greedy_capped_base_stock");
 		auto dcl = dp.GetDCL(mdp, policy, dcl_config);
 		dcl.TrainPolicy();

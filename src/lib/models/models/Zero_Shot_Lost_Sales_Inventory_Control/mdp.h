@@ -79,18 +79,14 @@ namespace DynaPlex::Models {
 				bool stochasticLeadtimes, censoredLeadtime, order_crossover;
 				bool randomYield, censoredRandomYield;
 
-				std::vector<std::vector<double>> true_demand_probs;
-				std::vector<int64_t> max_true_demand;
+				std::vector<std::vector<double>> cumulativePMFs;
 				std::vector<int64_t> min_true_demand;
 
 				double p;
 				int64_t MaxOrderSize, MaxSystemInv, MaxOrderSize_Limit, OrderConstraint;
-				std::vector<int64_t> fractiles;
-				std::vector<std::vector<int64_t>> cycle_fractiles;
 				std::vector<int64_t> cycle_MaxOrderSize;
 				std::vector<int64_t> cycle_MaxSystemInv;
 
-				std::vector<double> leadtime_probs;
 				std::vector<double> estimated_leadtime_probs;
 				std::vector<double> cumulative_leadtime_probs;
 				int64_t min_leadtime, max_leadtime;
@@ -129,7 +125,7 @@ namespace DynaPlex::Models {
 			int64_t GetM(const State&) const;
 
 		private:
-			void UpdateDemandStatistics(State& state, bool uncensored, int64_t newObs) const;
+			void UpdateDemandStatistics(State& state, bool uncensored, int64_t newObs) const; // Kaplan - Meier Estimator
 			void UpdateLeadTimeStatistics(State& state) const;
 			std::vector<double> UpdateRandomYieldFeatures(const State& state) const;
 			std::vector<double> GetRandomYieldFeatures(const State& state) const;
