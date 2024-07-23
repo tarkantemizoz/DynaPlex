@@ -3,6 +3,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 #include <concepts>
 #if DP_PYBIND_SUPPORT 
 namespace pybind11 {
@@ -71,8 +72,21 @@ namespace DynaPlex {
 			a.push_back(std::declval<typename T::value_type>());
 		};
 
+		template<typename T, typename t_VarGroup>
+		concept AppendableVarGroupContainer = requires(T a, const t_VarGroup & vg) {
+			typename T::value_type;
+			{ T() };
+			a.clear();
+			a.push_back(vg);
+		};
+
 		template<typename T>
-		concept AppendableVarGroupContainer = AppendableContainer<T> && ConvertibleFromVarGroup<typename T::value_type>;
+		concept HasReserve = requires(T a, size_t size) {
+			a.reserve(size);
+		};
+
+		template<typename T>
+		concept AppendableFromVarGroupContainer = AppendableContainer<T> && ConvertibleFromVarGroup<typename T::value_type>;
 
 		template<typename T>
 		concept AppendableBasicContainer = AppendableContainer<T> && DP_BasicElementType<typename T::value_type>;
@@ -84,7 +98,7 @@ namespace DynaPlex {
 		using DoubleVec = std::vector<double>;
 		using StringVec = std::vector<std::string>;
 		using VarGroupVec = std::vector<VarGroup>;
-		using DataType = std::variant<bool, int64_t, double, std::string,DynaPlex::VarGroup, Int64Vec,DoubleVec,StringVec,VarGroupVec>;
+		using DataType = std::variant<bool, int64_t, double, std::string, DynaPlex::VarGroup, Int64Vec, DoubleVec, StringVec, VarGroupVec>;
 		using TupleList = std::initializer_list< std::tuple<std::string, DataType>>;
 
 		VarGroup(TupleList list);
@@ -132,7 +146,7 @@ namespace DynaPlex {
 
 		template <typename T>
 			requires std::is_enum_v<T>
-		void Add(const std::string& key,const T& val) {
+		void Add(const std::string& key, const T& val) {
 			using UnderlyingType = std::underlying_type_t<T>;
 			static_assert(std::is_same_v<UnderlyingType, int64_t> || std::is_same_v<UnderlyingType, int>,
 				"VarGroup: Supported enum class underlying types are int and int64_t only");
@@ -140,23 +154,23 @@ namespace DynaPlex {
 		}
 
 		template <Concepts::ConvertibleToVarGroup T>
-		void Add(const std::string& key,const T& val)
+		void Add(const std::string& key, const T& val)
 		{
 			Add(key, val.ToVarGroup());
 		}
 
 		template <Concepts::ReadableVarGroupContainer T>
-		void Add(const std::string& key,const T& val)
+		void Add(const std::string& key, const T& val)
 		{
 			VarGroupVec vec;
 			for (const auto& item : val) {
-				vec.push_back(item.ToVarGroup());
+				vec.push_back(std::move(item.ToVarGroup()));
 			}
 			Add(key, vec);
 		}
 
 		template <Concepts::ReadableBasicContainer T>
-		void Add(const std::string& key,const T& val)
+		void Add(const std::string& key, const T& val)
 		{
 			std::vector<typename T::value_type> vec;
 			for (const auto& item : val) {
@@ -203,7 +217,7 @@ namespace DynaPlex {
 		}
 
 
-		bool HasKey(const std::string& key, bool warn_if_similar=true) const;
+		bool HasKey(const std::string& key, bool warn_if_similar = true) const;
 
 
 		void GetOrDefault(const std::string& key, int64_t& out_val, const int64_t& default_value) const;
@@ -242,15 +256,34 @@ namespace DynaPlex {
 			out_val = T(vars);
 		}
 
-		template<Concepts::AppendableVarGroupContainer T>
+		template<Concepts::AppendableFromVarGroupContainer T>
 		void Get(const std::string& key, T& out_val) const {
 			out_val.clear();
+			VarGroupVec varsVec;
+			Get(key, varsVec);
+			if constexpr (Concepts::HasReserve<T>)
+			{
+				out_val.reserve(varsVec.size());
+			}
+			for (VarGroup& p : varsVec) {
+				out_val.push_back(typename T::value_type(p));
+			}
+		}
 
+		template<typename T>
+		requires Concepts::AppendableVarGroupContainer<T, DynaPlex::VarGroup>
+		void Get(const std::string& key, T& out_val) const {
+			out_val.clear();
 			VarGroupVec varsVec;
 			Get(key, varsVec);
 
+			if constexpr (Concepts::HasReserve<T>)
+			{
+				out_val.reserve(varsVec.size());
+			}
+
 			for (VarGroup& p : varsVec) {
-				out_val.push_back(typename T::value_type(p));
+				out_val.push_back(p);
 			}
 		}
 
@@ -260,14 +293,20 @@ namespace DynaPlex {
 			using ElementType = typename T::value_type;
 			std::vector<ElementType> varsVec;
 			Get(key, varsVec);
-		
+
+
+			if constexpr (Concepts::HasReserve<T>)
+			{
+				out_val.reserve(varsVec.size());
+			}
+
 			for (ElementType& p : varsVec) {
 				out_val.push_back(p);
 			}
 		}
 
-		void SaveToFile(const std::string & filePath,const int indent=-1) const;
-		static VarGroup LoadFromFile(const std::string &filePath);
+		void SaveToFile(const std::string& filePath, const int indent = -1) const;
+		static VarGroup LoadFromFile(const std::string& filePath);
 
 		std::string Hash() const;
 		int64_t Int64Hash() const;
@@ -280,9 +319,56 @@ namespace DynaPlex {
 		
 		std::string Identifier() const;
 
+		/// Gets all the top-level keys for this instance. 
+		std::vector<std::string> Keys() const;
+
 		//sorts the top level of the VarGroup by key, in alphabetical order.
 		void SortTopLevel();
 		
+		template <Concepts::ConvertibleToVarGroup T>
+		void Add(const std::string& key, const std::unordered_map<std::string, T>& map) {
+			DynaPlex::VarGroup varGroup{};
+			for (const auto& [mapKey, mapValue] : map) {
+				varGroup.Add(mapKey, mapValue.ToVarGroup());
+			}
+			Add(key, std::move(varGroup));
+		}
+
+		template <Concepts::ConvertibleFromVarGroup T>
+		void Get(const std::string& key, std::unordered_map<std::string, T>& out_val) const {
+			out_val.clear();
+			VarGroup varGroup;
+			Get(key, varGroup);
+			auto keys = varGroup.Keys();
+			for (const auto& key : keys) {
+				VarGroup value;
+				varGroup.Get(key, value);
+				out_val[key] = T(value);
+			}
+		}
+
+
+		template<Concepts::DP_BasicElementType T>
+		void Add(const std::string& key, const std::unordered_map<std::string, T>& map) {
+			VarGroup varGroup;
+			for (const auto& [mapKey, mapValue] : map) {
+				varGroup.Add(mapKey, mapValue);
+			}
+			Add(key, varGroup);
+		}
+
+		template<Concepts::DP_BasicElementType T>
+		void Get(const std::string& key, std::unordered_map<std::string, T>& out_val) const {
+			out_val.clear();
+			VarGroup varGroup;
+			Get(key, varGroup);
+			auto keys = varGroup.Keys();
+			for (const auto& key : keys) {
+				T value{};
+				varGroup.Get(key, value);
+				out_val[key] = value;
+			}
+		}
 
 #if DP_PYBIND_SUPPORT
 		std::unique_ptr<pybind11::dict> ToPybind11Dict() const;

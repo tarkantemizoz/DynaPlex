@@ -21,10 +21,10 @@ namespace DynaPlex {
 	/**
 	 * IdKeyContainer is specifically suitable if T can be constructed from VarGroup, and if we are provided
 	 * a list of objects that each have a public std::string key. The container constructs the objects, and makes them
-	 * accessibly either by index, or by key. 
+	 * accessibly either by index, or by key.
 	 */
 	template<Concepts::ConvertibleFromVarGroup T>
-	requires HasStringKey<T>
+		requires HasStringKey<T>
 	class IdKeyContainer {
 	private:
 		std::vector<T> backstore;
@@ -41,7 +41,7 @@ namespace DynaPlex {
 			return keys.at(index);
 		}
 
-		int64_t index_for(const std::string& key) const{
+		int64_t index_for(const std::string& key) const {
 			// Check if the key exists in the map
 			auto it = key_lookup.find(key);
 			if (it != key_lookup.end()) {
@@ -51,7 +51,7 @@ namespace DynaPlex {
 			else {
 				// Key not found, handle it accordingly
 				// Here, I throw an exception, but you could return a default value or handle it differently
-				throw DynaPlex::Error("IdKeyContainer: Key \'"+ key + "\' not found");
+				throw DynaPlex::Error("IdKeyContainer: Key \'" + key + "\' not found");
 			}
 		}
 
@@ -92,7 +92,7 @@ namespace DynaPlex {
 			key_lookup.reserve(size);
 			backstore.reserve(size);
 		}
-		
+
 		void push_back(const DynaPlex::VarGroup& vg) {
 			backstore.emplace_back(vg);
 			key_lookup[backstore.back().key] = keys.size();

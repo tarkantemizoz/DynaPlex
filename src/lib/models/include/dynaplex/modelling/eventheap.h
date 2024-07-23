@@ -97,6 +97,16 @@ namespace DynaPlex {
          * @brief Access the first element of the heap.
          * @return A constant reference to the top element.
          */
+        T& first() {
+            if (data.size() == 0)
+                throw DynaPlex::Error("EventHeap::first - heap is empty.");
+            return data.front();
+        }
+
+        /**
+         * @brief Access the first element of the heap.
+         * @return A constant reference to the top element.
+         */
         T& first(){
             if (data.size() == 0)
                 throw DynaPlex::Error("EventHeap::first - heap is empty.");

@@ -56,7 +56,6 @@ namespace DynaPlex::Models {
 
 				int64_t period;
 				std::vector<int64_t> demand_cycles;
-				int64_t limitingPeriod;
 				int64_t order_initializationPhase;
 
 				Queue<int64_t> state_vector;

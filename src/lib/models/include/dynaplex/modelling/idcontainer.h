@@ -10,8 +10,8 @@ namespace DynaPlex {
 
     template<Concepts::VarGroupConvertible T>
     class IdContainer {
-    private:    
-       std::vector<std::optional<std::pair<int64_t, T>>> backstore;
+    private:
+        std::vector<std::optional<std::pair<int64_t, T>>> backstore;
         size_t first_empty_id = 1;
         size_t num_items = 0;
 
@@ -41,7 +41,7 @@ namespace DynaPlex {
 
                 DynaPlex::VarGroup vg;
                 varGroup.Get(key, vg);
-                backstore[id] = std::make_pair(id,T(vg));
+                backstore[id] = std::make_pair(id, T(vg));
                 num_items++;
             }
             updateFirstEmptyIndex();
@@ -53,7 +53,7 @@ namespace DynaPlex {
             }
             auto& element = backstore[first_empty_id];
             // Placement new to construct the object in-place, to avoid a memory allocation here:
-       
+
             backstore[first_empty_id].emplace(first_empty_id, T{});
             num_items++;
             auto id = first_empty_id;
@@ -80,7 +80,7 @@ namespace DynaPlex {
         }
 
         void Delete(int64_t id) {
-            if (id >0 && id < backstore.size() && backstore[id]) {
+            if (id > 0 && id < backstore.size() && backstore[id]) {
                 backstore[id] = std::nullopt;
                 num_items--;
                 if (id < first_empty_id) {
@@ -94,8 +94,8 @@ namespace DynaPlex {
 
         VarGroup ToVarGroup() const {
             VarGroup varGroup{};
-            for (auto& [id,item] : *this) {
-                varGroup.Add(std::to_string(id), item.ToVarGroup());                
+            for (auto& [id, item] : *this) {
+                varGroup.Add(std::to_string(id), item.ToVarGroup());
             }
             return varGroup;
         }
@@ -107,10 +107,10 @@ namespace DynaPlex {
         class iterator {
         public:
             using iterator_category = std::forward_iterator_tag;
-            using value_type = std::pair<int64_t, T>; 
+            using value_type = std::pair<int64_t, T>;
             using difference_type = std::ptrdiff_t;
             using pointer = value_type*;
-            using reference = value_type&;  
+            using reference = value_type&;
 
             iterator(std::vector<std::optional<std::pair<int64_t, T>>>& bs, size_t pos) : backstore(bs), position(pos) {
                 advanceToNextValid();

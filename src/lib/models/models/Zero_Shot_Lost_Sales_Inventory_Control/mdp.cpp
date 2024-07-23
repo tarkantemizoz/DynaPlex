@@ -350,131 +350,125 @@ namespace DynaPlex::Models {
 						int64_t last_order = state.state_vector.back();
 						if (!state.randomYield) { // training - order crossover no yield
 							if (state.min_leadtime == 0 && last_order > 0) {
-								double prob = state.cumulative_leadtime_probs[0];
-								for (action_num = 0; action_num < last_order; action_num++) {
-									if (event.second[action_num] <= prob) {
-										state.state_vector.at(max_leadtime - 1)--;
-										onHand++;
-									}
-								}
+								const double prob = state.cumulative_leadtime_probs[0];
+								int64_t decrement_count = std::count_if(event.second.begin(), event.second.begin() + last_order,
+									[prob](double value) { return value <= prob; });
+								state.state_vector.at(max_leadtime - 1) -= decrement_count;
+								onHand += decrement_count;
+								action_num = last_order;
 							}
 							for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-								int64_t expected = state.state_vector.at(max_leadtime - i);
-								if (expected > 0) {
+								int64_t& current_expected = state.state_vector.at(max_leadtime - i);
+								if (current_expected > 0) {
 									int64_t lb = action_num;
-									int64_t ub = expected + lb;
-									double prob = state.cumulative_leadtime_probs[i];
-									for (action_num = lb; action_num < ub; action_num++) {
-										if (event.second[action_num] <= prob) {
-											state.state_vector.at(max_leadtime - i)--;
-											new_coming_orders++;
-										}
-									}
+									int64_t ub = current_expected + lb;
+									const double prob = state.cumulative_leadtime_probs[i];
+									int64_t decrement_count = std::count_if(event.second.begin() + lb, event.second.begin() + ub,
+										[prob](double value) { return value <= prob; });
+									current_expected -= decrement_count;
+									new_coming_orders += decrement_count;
+									action_num = ub;
 								}
 							}
-							int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+							int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 							if (last_expected > 0) {
-								state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
 								new_coming_orders += last_expected;
+								last_expected = 0;
 							}
 						}
 						else { // training - order crossover random yield
 							if (state.yield_when_realized) { // training - order crossover random yield realized when received
 								state.pipeline_vector.push_back(last_order);
-								state.dummy_pipeline_vector.push_back(last_order);
-								int64_t event_size = static_cast<int64_t>(event.second.size()) - 1;
+								const int64_t event_size = static_cast<int64_t>(event.second.size()) - 1;
 								if (state.min_leadtime == 0 && last_order > 0) {
-									double prob_leadtime = state.cumulative_leadtime_probs[0];
-									double prob_yield = state.random_yield_probs_crossover[last_order];
+									const double prob_leadtime = state.cumulative_leadtime_probs[0];
+									const double prob_yield = state.random_yield_probs_crossover[last_order];
+									int64_t decrement_count = 0;
 									for (action_num = 0; action_num < last_order; action_num++) {
 										if (event.second[action_num] <= prob_leadtime) {
-											state.state_vector.at(max_leadtime - 1)--;
+											decrement_count++;
 											if (event.second[event_size - action_num] <= prob_yield)
 												onHand++;
 											else
 												state.total_inv--;
 										}
 									}
+									state.state_vector.at(max_leadtime - 1) -= decrement_count;
 								}
 								for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-									int64_t expected = state.state_vector.at(max_leadtime - i);
+									int64_t index = max_leadtime - i;
+									int64_t& expected = state.state_vector.at(max_leadtime - i);
 									if (expected > 0) {
 										int64_t lb = action_num;
 										int64_t ub = expected + lb;
-										double prob_leadtime = state.cumulative_leadtime_probs[i];
-										int64_t order_placed = state.pipeline_vector.at(max_leadtime - i);
-										double prob_yield = state.random_yield_probs_crossover[order_placed];
+										const double prob_leadtime = state.cumulative_leadtime_probs[i];
+										const int64_t order_placed = state.pipeline_vector.at(index);
+										const double prob_yield = state.random_yield_probs_crossover[order_placed];
+										int64_t decrement_count = 0;
 										for (action_num = lb; action_num < ub; action_num++) {
 											if (event.second[action_num] <= prob_leadtime) {
-												state.state_vector.at(max_leadtime - i)--;
+												decrement_count++;
 												if (event.second[event_size - action_num] <= prob_yield)
 													new_coming_orders++;
 												else
 													state.total_inv--;
 											}
 										}
+										expected -= decrement_count;
 									}
 								}
-								int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+								int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 								if (last_expected > 0) {
-									state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
-									int64_t order_placed = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
-									double prob_yield = state.random_yield_probs_crossover[order_placed];
+									const int64_t order_placed = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
+									const double prob_yield = state.random_yield_probs_crossover[order_placed];
 									for (int64_t i = 0; i < last_expected; i++) {
 										if (event.second[event_size - action_num - i] <= prob_yield)
 											new_coming_orders++;
 										else
 											state.total_inv--;
 									}
+									last_expected = 0;
 								}
 								state.pipeline_vector.pop_front();
-								state.dummy_pipeline_vector.pop_front();
 							}
 							else { // training - order crossover random yield realized before shipment
-								int64_t to_be_received = last_order;
-								if (to_be_received > 0) {
-									to_be_received = OrderArrivals(state, last_order, event.second.back(), false);
-								}
+								int64_t to_be_received = (last_order > 0) ? OrderArrivals(state, last_order, event.second.back(), false) : 0;
 								state.pipeline_vector.push_back(to_be_received);
-								state.dummy_pipeline_vector.push_back(last_order);
 								if (state.min_leadtime == 0 && last_order > 0) {
-									double prob = state.cumulative_leadtime_probs[0];
-									for (action_num = 0; action_num < to_be_received; action_num++) {
-										if (event.second[action_num] <= prob) {
-											state.state_vector.at(max_leadtime - 1)--;
-											state.pipeline_vector.at(max_leadtime - 1)--;
-											onHand++;
-										}
+									if (to_be_received > 0) {
+										const double prob = state.cumulative_leadtime_probs[0];
+										int64_t decrement_count = std::count_if(event.second.begin(), event.second.begin() + to_be_received,
+											[prob](double value) { return value <= prob; });
+										state.state_vector.at(max_leadtime - 1) -= decrement_count;
+										state.pipeline_vector.at(max_leadtime - 1) -= decrement_count;
+										onHand += decrement_count;
 									}
 									action_num = last_order;
 								}
 								for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-									int64_t expected = state.state_vector.at(max_leadtime - i);
-									int64_t realized = state.pipeline_vector.at(max_leadtime - i);
+									int64_t& current_expected = state.state_vector.at(max_leadtime - i);
+									int64_t& current_realized = state.pipeline_vector.at(max_leadtime - i);
 									int64_t lb = action_num;
-									if (realized > 0) {										
-										int64_t ub = realized + lb;
-										double prob = state.cumulative_leadtime_probs[i];
-										for (action_num = lb; action_num < ub; action_num++) {
-											if (event.second[action_num] <= prob) {
-												state.state_vector.at(max_leadtime - i)--;
-												state.pipeline_vector.at(max_leadtime - i)--;
-												new_coming_orders++;
-											}
-										}
+									if (current_realized > 0) {
+										int64_t ub = current_realized + lb;
+										const double prob = state.cumulative_leadtime_probs[i];
+										int64_t decrement_count = std::count_if(event.second.begin() + lb, event.second.begin() + ub,
+											[prob](double value) { return value <= prob; });
+										current_expected -= decrement_count;
+										current_realized -= decrement_count;
+										new_coming_orders += decrement_count;
 									}
-									action_num = expected + lb;
+									action_num = current_expected + lb;
 								}
-								int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+								int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 								if (last_expected > 0) {
-									int64_t last_realized = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
-									state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
-									state.pipeline_vector.at(max_leadtime - state.max_leadtime) = 0;
+									int64_t& last_realized = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
 									state.total_inv -= (last_expected - last_realized);
 									new_coming_orders += last_realized;
+									last_expected = 0;
+									last_realized = 0;
 								}
 								state.pipeline_vector.pop_front();
-								state.dummy_pipeline_vector.pop_front();
 							}
 						}
 					}
@@ -484,16 +478,16 @@ namespace DynaPlex::Models {
 							for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 								if (random_var <= state.cumulative_leadtime_probs[i]) {
 									int64_t base_loc = (i == 0 ? 1 : i);
-									int64_t earliest_received = state.state_vector.at(max_leadtime - base_loc);
-									state.state_vector.at(max_leadtime - base_loc) = 0;
+									int64_t& earliest_received = state.state_vector.at(max_leadtime - base_loc);
 									if (i == 0)
 										onHand += earliest_received;
 									else
 										new_coming_orders += earliest_received;
+									earliest_received = 0;
 									for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-										int64_t received = state.state_vector.at(max_leadtime - j);
-										state.state_vector.at(max_leadtime - j) = 0;
+										int64_t& received = state.state_vector.at(max_leadtime - j);
 										new_coming_orders += received;
+										received = 0;
 									}
 									break;
 								}
@@ -504,21 +498,21 @@ namespace DynaPlex::Models {
 								for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 									if (random_var <= state.cumulative_leadtime_probs[i]) {
 										int64_t base_loc = (i == 0 ? 1 : i);
-										int64_t earliest_expected = state.state_vector.at(max_leadtime - base_loc);
+										int64_t& earliest_expected = state.state_vector.at(max_leadtime - base_loc);
 										int64_t earliest_received = OrderArrivals(state, earliest_expected, event.second[i - state.min_leadtime], false);
-										state.state_vector.at(max_leadtime - base_loc) = 0;
-										state.total_inv -= (earliest_expected - earliest_received);
 										if (i == 0)
 											onHand += earliest_received;
 										else
 											new_coming_orders += earliest_received;
+										state.total_inv -= (earliest_expected - earliest_received);
+										earliest_expected = 0;
 										for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-											int64_t expected = state.state_vector.at(max_leadtime - j);
+											int64_t& expected = state.state_vector.at(max_leadtime - j);
 											if (expected > 0) {
 												int64_t received = OrderArrivals(state, expected, event.second[j - state.min_leadtime], false);
-												state.state_vector.at(max_leadtime - j) = 0;
-												state.total_inv -= (expected - received);
 												new_coming_orders += received;
+												state.total_inv -= (expected - received);
+												expected = 0;
 											}
 										}
 										break;
@@ -527,38 +521,35 @@ namespace DynaPlex::Models {
 							}
 							else { // training - no crossover random yield realized before shipment
 								int64_t last_order = state.state_vector.back();
-								int64_t to_be_received = last_order;
-								if (to_be_received > 0) {
-									to_be_received = OrderArrivals(state, last_order, event.second.back(), false);
-								}
+								int64_t to_be_received = (last_order > 0) ? OrderArrivals(state, last_order, event.second.back(), false) : 0;
 								state.pipeline_vector.push_back(to_be_received);
 								for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 									int64_t base_loc = (i == 0 ? 1 : i);
-									int64_t earliest_received = state.pipeline_vector.at(max_leadtime - base_loc);
+									int64_t& earliest_received = state.pipeline_vector.at(max_leadtime - base_loc);
 									if (random_var <= state.cumulative_leadtime_probs[i] && earliest_received > 0) {
-										int64_t earliest_expected = state.state_vector.at(max_leadtime - base_loc);
-										state.state_vector.at(max_leadtime - base_loc) = 0;
-										state.pipeline_vector.at(max_leadtime - base_loc) = 0;
-										state.total_inv -= (earliest_expected - earliest_received);
+										int64_t& earliest_expected = state.state_vector.at(max_leadtime - base_loc);
 										if (i == 0)
 											onHand += earliest_received;
 										else
 											new_coming_orders += earliest_received;
+										state.total_inv -= (earliest_expected - earliest_received);
+										earliest_expected = 0;
+										earliest_received = 0;
 										for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-											int64_t received = state.pipeline_vector.at(max_leadtime - j);
-											int64_t expected = state.state_vector.at(max_leadtime - j);
-											state.pipeline_vector.at(max_leadtime - j) = 0;
-											state.state_vector.at(max_leadtime - j) = 0;
+											int64_t& received = state.pipeline_vector.at(max_leadtime - j);
+											int64_t& expected = state.state_vector.at(max_leadtime - j);
 											state.total_inv -= (expected - received);
 											new_coming_orders += received;
+											expected = 0;
+											received = 0;
 										}
 										break;
 									}
 								}
-								int64_t not_received = state.state_vector.at(max_leadtime - state.max_leadtime);
+								int64_t& not_received = state.state_vector.at(max_leadtime - state.max_leadtime);
 								if (not_received > 0) {
-									state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
 									state.total_inv -= not_received;
+									not_received = 0;
 								}
 								state.pipeline_vector.pop_front();
 							}
@@ -572,229 +563,206 @@ namespace DynaPlex::Models {
 						int64_t last_order = state.state_vector.back();
 						if (!state.randomYield) { // evaluate order crossover no yield
 							if (state.min_leadtime == 0 && last_order > 0) {
-								double prob = state.cumulative_leadtime_probs[0];
-								for (action_num = 0; action_num < last_order; action_num++) {
-									if (event.second[action_num] <= prob) {
-										state.state_vector.at(max_leadtime - 1)--;
-										onHand++;
-										if (state.censoredLeadtime) {
-											state.past_leadtimes[0]++;
-											state.orders_received++;
-										}
-									}
+								const double prob = state.cumulative_leadtime_probs[0];
+								int64_t decrement_count = std::count_if(event.second.begin(), event.second.begin() + last_order,
+									[prob](double value) { return value <= prob; });
+								state.state_vector.at(max_leadtime - 1) -= decrement_count;
+								onHand += decrement_count;
+								action_num = last_order;
+								if (state.censoredLeadtime) {
+									state.past_leadtimes[0] += decrement_count;
+									state.orders_received += decrement_count;
 								}
 							}
 							for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-								int64_t expected = state.state_vector.at(max_leadtime - i);
-								if (expected > 0) {
+								int64_t& current_expected = state.state_vector.at(max_leadtime - i);
+								if (current_expected > 0) {
 									int64_t lb = action_num;
-									int64_t ub = expected + lb;
-									double prob = state.cumulative_leadtime_probs[i];
-									for (action_num = lb; action_num < ub; action_num++) {
-										if (event.second[action_num] <= prob) {
-											state.state_vector.at(max_leadtime - i)--;
-											new_coming_orders++;
-											if (state.censoredLeadtime) {
-												state.past_leadtimes[i]++;
-												state.orders_received++;
-											}
-										}
+									int64_t ub = current_expected + lb;
+									const double prob = state.cumulative_leadtime_probs[i];
+									int64_t decrement_count = std::count_if(event.second.begin() + lb, event.second.begin() + ub,
+										[prob](double value) { return value <= prob; });
+									current_expected -= decrement_count;
+									new_coming_orders += decrement_count;
+									action_num = ub;
+									if (state.censoredLeadtime) {
+										state.past_leadtimes[i] += decrement_count;
+										state.orders_received += decrement_count;
 									}
 								}
 							}
-							int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+							int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 							if (last_expected > 0) {
-								state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
 								new_coming_orders += last_expected;
 								if (state.censoredLeadtime) {
 									state.past_leadtimes[state.max_leadtime] += last_expected;
 									state.orders_received += last_expected;
 								}
+								last_expected = 0;
 							}
 						}
 						else { // evaluate order crossover random yield
 							if (state.yield_when_realized) { // evaluate order crossover random yield realized when received
+								const int64_t event_size = static_cast<int64_t>(event.second.size()) - 1;
 								state.pipeline_vector.push_back(last_order);
-								state.dummy_pipeline_vector.push_back(last_order);
-								int64_t event_size = static_cast<int64_t>(event.second.size()) - 1;
 								if (state.min_leadtime == 0 && last_order > 0) {
-									double prob_leadtime = state.cumulative_leadtime_probs[0];
-									double prob_yield = state.random_yield_probs_crossover[last_order];
+									const double prob_leadtime = state.cumulative_leadtime_probs[0];
+									const double prob_yield = state.random_yield_probs_crossover[last_order];
+									int64_t decrement_count = 0;
 									for (action_num = 0; action_num < last_order; action_num++) {
 										if (event.second[action_num] <= prob_leadtime) {
-											state.state_vector.at(max_leadtime - 1)--;
-											if (event.second[event_size - action_num] <= prob_yield) 
-												onHand++;											
-											if (state.censoredLeadtime) {
-												state.past_leadtimes[0]++;
-												state.orders_received++;
-											}
+											decrement_count++;
+											if (event.second[event_size - action_num] <= prob_yield)
+												onHand++;
+											else
+												state.total_inv--;
 										}
 									}
-									int64_t arrived = last_order - state.state_vector.at(max_leadtime - 1);
-									if (arrived > 0) {
-										int64_t received = onHand - initial_onHand;
-										state.total_inv -= (arrived - received);
-										if (state.censoredRandomYield) {
-											state.random_yield_statistics[last_order].first += received;
-											state.random_yield_statistics[last_order].second += arrived;
-										}
+									state.state_vector.at(max_leadtime - 1) -= decrement_count;
+									if (state.censoredLeadtime) {
+										state.past_leadtimes[0] += decrement_count;
+										state.orders_received += decrement_count;
+									}
+									if (state.censoredRandomYield) {
+										state.random_yield_statistics[last_order].first += onHand - initial_onHand;
+										state.random_yield_statistics[last_order].second += decrement_count;										
 									}
 								}
 								for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-									int64_t expected = state.state_vector.at(max_leadtime - i);
+									int64_t index = max_leadtime - i;
+									int64_t& expected = state.state_vector.at(max_leadtime - i);
 									if (expected > 0) {
 										int64_t lb = action_num;
 										int64_t ub = expected + lb;
-										double prob_leadtime = state.cumulative_leadtime_probs[i];
-										int64_t order_placed = state.pipeline_vector.at(max_leadtime - i);
-										double prob_yield = state.random_yield_probs_crossover[order_placed];
-										int64_t received = 0;
+										const double prob_leadtime = state.cumulative_leadtime_probs[i];
+										const int64_t order_placed = state.pipeline_vector.at(index);
+										const double prob_yield = state.random_yield_probs_crossover[order_placed];
+										int64_t decrement_count = 0;
 										for (action_num = lb; action_num < ub; action_num++) {
 											if (event.second[action_num] <= prob_leadtime) {
-												state.state_vector.at(max_leadtime - i)--;
-												if (event.second[event_size - action_num] <= prob_yield) {
+												decrement_count++;
+												if (event.second[event_size - action_num] <= prob_yield)
 													new_coming_orders++;
-													received++;
-												}
-												if (state.censoredLeadtime) {
-													state.past_leadtimes[i]++;
-													state.orders_received++;
-												}
+												else
+													state.total_inv--;
 											}
 										}
-										int64_t arrived = expected - state.state_vector.at(max_leadtime - i);
-										if (arrived > 0) {
-											state.total_inv -= (arrived - received);
-											if (state.censoredRandomYield) {
-												state.random_yield_statistics[order_placed].first += received;
-												state.random_yield_statistics[order_placed].second += arrived;
-											}
+										expected -= decrement_count;
+										if (state.censoredLeadtime) {
+											state.past_leadtimes[i] += decrement_count;
+											state.orders_received += decrement_count;
+										}
+										if (state.censoredRandomYield) {
+											state.random_yield_statistics[last_order].first += new_coming_orders;
+											state.random_yield_statistics[last_order].second += decrement_count;										
 										}
 									}
 								}
-								int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+								int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 								if (last_expected > 0) {
-									state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
-									int64_t order_placed = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
-									double prob_yield = state.random_yield_probs_crossover[order_placed];
-									int64_t received = 0;
+									const int64_t order_placed = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
+									const double prob_yield = state.random_yield_probs_crossover[order_placed];
+									int64_t received_until = new_coming_orders;
 									for (int64_t i = 0; i < last_expected; i++) {
-										if (event.second[event_size - action_num - i] <= prob_yield) {
+										if (event.second[event_size - action_num - i] <= prob_yield)
 											new_coming_orders++;
-											received++;
-										}
+										else
+											state.total_inv--;
 									}
 									if (state.censoredLeadtime) {
 										state.past_leadtimes[state.max_leadtime] += last_expected;
 										state.orders_received += last_expected;
 									}
-									state.total_inv -= (last_expected - received);
 									if (state.censoredRandomYield) {
-										state.random_yield_statistics[order_placed].first += received;
-										state.random_yield_statistics[order_placed].second += last_expected;
+										state.random_yield_statistics[last_order].first += new_coming_orders - received_until;
+										state.random_yield_statistics[last_order].second += last_expected;
 									}
-								}						
+									last_expected = 0;
+								}
 								state.pipeline_vector.pop_front();
-								state.dummy_pipeline_vector.pop_front();
 							}
 							else { // evaluate order crossover random yield realized before shipment
-								int64_t to_be_received = last_order;
-								if (to_be_received > 0) {
-									to_be_received = OrderArrivals(state, last_order, event.second.back(), false);
-								}
+								int64_t to_be_received = (last_order > 0) ? OrderArrivals(state, last_order, event.second.back(), false) : 0;
 								state.pipeline_vector.push_back(to_be_received);
 								state.dummy_pipeline_vector.push_back(last_order);
-								if (state.censoredRandomYield) {
-									state.received_orders_vector.push_back(to_be_received);
-								}
-								if (state.min_leadtime == 0 && to_be_received > 0) {
-									double prob = state.cumulative_leadtime_probs[0];
-									for (action_num = 0; action_num < to_be_received; action_num++) {
-										if (event.second[action_num] <= prob) {
-											state.state_vector.at(max_leadtime - 1)--;
-											state.pipeline_vector.at(max_leadtime - 1)--;
-											onHand++;
-											if (state.censoredLeadtime) {
-												state.past_leadtimes[0]++;
-												state.orders_received++;
-											}
+								state.received_orders_vector.push_back(to_be_received);
+								if (state.min_leadtime == 0 && last_order > 0) {
+									if (to_be_received > 0) {
+										const double prob = state.cumulative_leadtime_probs[0];
+										int64_t decrement_count = std::count_if(event.second.begin(), event.second.begin() + to_be_received,
+											[prob](double value) { return value <= prob; });
+										state.state_vector.at(max_leadtime - 1) -= decrement_count;
+										state.pipeline_vector.at(max_leadtime - 1) -= decrement_count;
+										onHand += decrement_count;
+										if (state.censoredLeadtime) {
+											state.past_leadtimes[0] += decrement_count;
+											state.orders_received += decrement_count;
 										}
 									}
 									action_num = last_order;
-									if (state.censoredRandomYield) {
-										if (state.state_vector.at(max_leadtime - 1) == 0) {
-											state.random_yield_statistics[last_order].first += last_order;
-											state.random_yield_statistics[last_order].second += last_order;
-											state.dummy_pipeline_vector.at(max_leadtime - 1) = 0;
-										}
+									if (state.censoredRandomYield && state.state_vector.at(max_leadtime - 1) == 0) {
+										state.random_yield_statistics[last_order].first += last_order;
+										state.random_yield_statistics[last_order].second += last_order;
+										state.dummy_pipeline_vector.at(max_leadtime - 1) = 0;									
 									}
 								}
 								for (int64_t i = std::max((int64_t)1, state.min_leadtime); i < state.max_leadtime; i++) {
-									int64_t expected = state.state_vector.at(max_leadtime - i);
-									int64_t realized = state.pipeline_vector.at(max_leadtime - i);
+									int64_t& current_expected = state.state_vector.at(max_leadtime - i);
+									int64_t& current_realized = state.pipeline_vector.at(max_leadtime - i);
 									int64_t lb = action_num;
-									if (realized > 0) {
-										int64_t ub = realized + lb;
-										double prob = state.cumulative_leadtime_probs[i];
-										for (action_num = lb; action_num < ub; action_num++) {
-											if (event.second[action_num] <= prob) {
-												state.state_vector.at(max_leadtime - i)--;
-												state.pipeline_vector.at(max_leadtime - i)--;
-												new_coming_orders++;
-												if (state.censoredLeadtime) {
-													state.past_leadtimes[i]++;
-													state.orders_received++;
-												}
-											}
-										}
-										if (state.censoredRandomYield) {
-											if (state.state_vector.at(max_leadtime - i) == 0) {
-												int64_t received = state.dummy_pipeline_vector.at(max_leadtime - i);
-												state.random_yield_statistics[received].first += received;
-												state.random_yield_statistics[received].second += received;
-												state.dummy_pipeline_vector.at(max_leadtime - i) = 0;
-											}
+									action_num = current_expected + lb;
+									if (current_realized > 0) {
+										int64_t ub = current_realized + lb;
+										const double prob = state.cumulative_leadtime_probs[i];
+										int64_t decrement_count = std::count_if(event.second.begin() + lb, event.second.begin() + ub,
+											[prob](double value) { return value <= prob; });
+										current_expected -= decrement_count;
+										current_realized -= decrement_count;
+										new_coming_orders += decrement_count;
+										if (state.censoredLeadtime) {
+											state.past_leadtimes[i] += decrement_count;
+											state.orders_received += decrement_count;
 										}
 									}
-									action_num = expected + lb;
+									if (state.censoredRandomYield && current_expected == 0) {
+										int64_t& received = state.dummy_pipeline_vector.at(max_leadtime - i);
+										state.random_yield_statistics[received].first += received;
+										state.random_yield_statistics[received].second += received;
+										received = 0;
+									}
 								}
-								int64_t last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
+								int64_t& last_expected = state.state_vector.at(max_leadtime - state.max_leadtime);
 								if (last_expected > 0) {
-									int64_t last_realized = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
-									state.state_vector.at(max_leadtime - state.max_leadtime) -= last_realized;
-									state.pipeline_vector.at(max_leadtime - state.max_leadtime) = 0;
+									int64_t& last_realized = state.pipeline_vector.at(max_leadtime - state.max_leadtime);
 									new_coming_orders += last_realized;
+									last_expected -= last_realized;
+									if (state.censoredRandomYield && last_expected == 0) {
+										int64_t& received = state.dummy_pipeline_vector.at(max_leadtime - state.max_leadtime);
+										state.random_yield_statistics[received].first += received;
+										state.random_yield_statistics[received].second += received;
+										received = 0;
+									}
 									if (state.censoredLeadtime) {
 										state.past_leadtimes[state.max_leadtime] += last_realized;
 										state.orders_received += last_realized;
 									}
-									if (state.censoredRandomYield) {
-										if (state.state_vector.at(max_leadtime - state.max_leadtime) == 0) {
-											int64_t received = state.dummy_pipeline_vector.at(max_leadtime - state.max_leadtime);
-											state.random_yield_statistics[received].first += received;
-											state.random_yield_statistics[received].second += received;
-											state.dummy_pipeline_vector.at(max_leadtime - state.max_leadtime) = 0;
-										}
+									else {
+										last_expected = 0;
 									}
 								}
-								if (state.censoredRandomYield) {
-									int64_t lead_time_threshold = max_leadtime;
-									if (!state.censoredLeadtime) {
-										lead_time_threshold = state.max_leadtime;
-										state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
-									}
-									int64_t expected_orders = state.dummy_pipeline_vector.at(max_leadtime - lead_time_threshold);
-									int64_t received_orders = state.received_orders_vector.at(max_leadtime - lead_time_threshold);
-									if (expected_orders > 0) {
+								int64_t lead_time_threshold = state.censoredLeadtime ? max_leadtime : state.max_leadtime;
+								int64_t expected_orders = state.dummy_pipeline_vector.at(max_leadtime - lead_time_threshold);
+								int64_t received_orders = state.received_orders_vector.at(max_leadtime - lead_time_threshold);
+								if (expected_orders > 0) {
+									state.total_inv -= (expected_orders - received_orders);
+									if (state.censoredRandomYield) {
 										state.random_yield_statistics[expected_orders].first += received_orders;
 										state.random_yield_statistics[expected_orders].second += expected_orders;
-										state.total_inv -= (expected_orders - received_orders);
 									}
-									state.received_orders_vector.pop_front();
 								}
-								state.dummy_pipeline_vector.pop_front();
 								state.pipeline_vector.pop_front();
+								state.received_orders_vector.pop_front();
+								state.dummy_pipeline_vector.pop_front();
 							}
 						}
 					}
@@ -803,20 +771,20 @@ namespace DynaPlex::Models {
 						if (!state.randomYield) { // evaluate no crossover no yield  
 							for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 								int64_t base_loc = (i == 0 ? 1 : i);
-								int64_t earliest_received = state.state_vector.at(max_leadtime - base_loc);
+								int64_t& earliest_received = state.state_vector.at(max_leadtime - base_loc);
 								if (random_var <= state.cumulative_leadtime_probs[i] && earliest_received > 0) {
 									int64_t last_observed = i;
-									state.state_vector.at(max_leadtime - base_loc) = 0;
 									if (i == 0)
 										onHand += earliest_received;
 									else
 										new_coming_orders += earliest_received;
+									earliest_received = 0;
 									for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-										int64_t received = state.state_vector.at(max_leadtime - j);
+										int64_t& received = state.state_vector.at(max_leadtime - j);
 										if (received > 0) {
 											last_observed = j;
-											state.state_vector.at(max_leadtime - j) = 0;
 											new_coming_orders += received;
+											received = 0;
 										}
 									}
 									if (state.censoredLeadtime) {
@@ -833,24 +801,24 @@ namespace DynaPlex::Models {
 							if (state.yield_when_realized) { // evaluate no crossover random yield realized when received
 								for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 									int64_t base_loc = (i == 0 ? 1 : i);
-									int64_t earliest_expected = state.state_vector.at(max_leadtime - base_loc);
+									int64_t& earliest_expected = state.state_vector.at(max_leadtime - base_loc);
 									if (random_var <= state.cumulative_leadtime_probs[i] && earliest_expected > 0) {
 										int64_t last_observed = i;
-										state.state_vector.at(max_leadtime - base_loc) = 0;
 										int64_t earliest_received = OrderArrivals(state, earliest_expected, event.second[i - state.min_leadtime]);
-										state.total_inv -= (earliest_expected - earliest_received);
 										if (i == 0)
 											onHand += earliest_received;
 										else
 											new_coming_orders += earliest_received;
+										state.total_inv -= (earliest_expected - earliest_received);
+										earliest_expected = 0;
 										for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-											int64_t expected = state.state_vector.at(max_leadtime - j);
+											int64_t& expected = state.state_vector.at(max_leadtime - j);
 											if (expected > 0) {
+												last_observed = j;											
 												int64_t received = OrderArrivals(state, expected, event.second[j - state.min_leadtime]);
-												state.total_inv -= (expected - received);
-												last_observed = j;
-												state.state_vector.at(max_leadtime - j) = 0;
 												new_coming_orders += received;
+												state.total_inv -= (expected - received);
+												expected = 0;
 											}
 										}
 										if (state.censoredLeadtime) {
@@ -865,32 +833,29 @@ namespace DynaPlex::Models {
 							}
 							else { // evaluate no crossover random yield realized before shipment
 								int64_t last_order = state.state_vector.back();
-								int64_t to_be_received = last_order;
-								if (to_be_received > 0) {
-									to_be_received = OrderArrivals(state, last_order, event.second.back(), false);
-								}
+								int64_t to_be_received = (last_order > 0) ? OrderArrivals(state, last_order, event.second.back(), false) : 0;
 								state.pipeline_vector.push_back(to_be_received);
 								for (int64_t i = state.min_leadtime; i <= state.max_leadtime; i++) {
 									int64_t base_loc = (i == 0 ? 1 : i);
-									int64_t earliest_received = state.pipeline_vector.at(max_leadtime - base_loc);
+									int64_t& earliest_received = state.pipeline_vector.at(max_leadtime - base_loc);
 									if (random_var <= state.cumulative_leadtime_probs[i] && earliest_received > 0) {
 										int64_t last_observed = i;
 										int64_t first_observed = i;
-										int64_t earliest_expected = state.state_vector.at(max_leadtime - base_loc);
+										int64_t& earliest_expected = state.state_vector.at(max_leadtime - base_loc);
 										if (state.censoredRandomYield) {
 											state.random_yield_statistics[earliest_expected].first += earliest_received;
 											state.random_yield_statistics[earliest_expected].second += earliest_expected;
 										}
-										state.state_vector.at(max_leadtime - base_loc) = 0;
-										state.pipeline_vector.at(max_leadtime - base_loc) = 0;
 										state.total_inv -= (earliest_expected - earliest_received);
 										if (i == 0)
 											onHand += earliest_received;
 										else
 											new_coming_orders += earliest_received;
+										earliest_received = 0;
+										earliest_expected = 0;
 										for (int64_t j = i + 1; j <= state.max_leadtime; j++) {
-											int64_t received = state.pipeline_vector.at(max_leadtime - j);
-											int64_t expected = state.state_vector.at(max_leadtime - j);
+											int64_t& received = state.pipeline_vector.at(max_leadtime - j);
+											int64_t& expected = state.state_vector.at(max_leadtime - j);
 											state.pipeline_vector.at(max_leadtime - j) = 0;
 											state.state_vector.at(max_leadtime - j) = 0;
 											state.total_inv -= (expected - received);
@@ -902,17 +867,8 @@ namespace DynaPlex::Models {
 												state.random_yield_statistics[expected].first += received;
 												state.random_yield_statistics[expected].second += expected;
 											}
-										}
-										for (int64_t j = state.max_leadtime + 1; j <= max_leadtime; j++) {
-											int64_t expected = state.state_vector.at(max_leadtime - j);
-											if (expected > 0) {
-												state.state_vector.at(max_leadtime - j) = 0;
-												state.total_inv -= expected;
-												if (state.censoredRandomYield) {
-													state.random_yield_statistics[expected].first += 0;
-													state.random_yield_statistics[expected].second += expected;
-												}
-											}
+											received = 0;
+											expected = 0;
 										}
 										if (state.censoredLeadtime) {
 											for (int64_t j = first_observed; j <= last_observed; j++) {
@@ -920,73 +876,69 @@ namespace DynaPlex::Models {
 												state.orders_received++;
 											}
 										}
+										else {
+											for (int64_t j = state.max_leadtime + 1; j <= max_leadtime; j++) {
+												int64_t& expected = state.state_vector.at(max_leadtime - j);
+												if (expected > 0) {
+													state.total_inv -= expected;
+													if (state.censoredRandomYield) {
+														state.random_yield_statistics[expected].first += 0;
+														state.random_yield_statistics[expected].second += expected;
+													}
+													expected = 0;
+												}
+											}
+										}
 										break;
 									}
 								}
-								if (state.censoredLeadtime) {
-									int64_t expected = state.state_vector.front();
-									if (expected > 0) {
-										state.total_inv -= expected;
-										if (state.censoredRandomYield) {
-											state.random_yield_statistics[expected].first += 0;
-											state.random_yield_statistics[expected].second += expected;
-										}
+								int64_t& expected = state.censoredLeadtime ? state.state_vector.front() : state.state_vector.at(max_leadtime - state.max_leadtime);
+								if (expected > 0) {
+									state.total_inv -= expected;
+									if (state.censoredRandomYield) {
+										state.random_yield_statistics[expected].first += 0;
+										state.random_yield_statistics[expected].second += expected;
 									}
-								}
-								else {
-									int64_t expected = state.state_vector.at(max_leadtime - state.max_leadtime);
-									if (expected > 0) {
-										state.state_vector.at(max_leadtime - state.max_leadtime) = 0;
-										state.total_inv -= expected;
-										if (state.censoredRandomYield) {
-											state.random_yield_statistics[expected].first += 0;
-											state.random_yield_statistics[expected].second += expected;
-										}
-									}
+									expected = 0;
 								}
 								state.pipeline_vector.pop_front();
 							}
 						}
 					}
-					if (state.censoredLeadtime && state.censoredDemand && state.order_initializationPhase > 0 && onHand > initial_onHand)
+					if (state.order_initializationPhase > 0 && state.censoredLeadtime && state.censoredDemand &&  onHand > initial_onHand)
 						state.order_initializationPhase = 0;
 				}
 			}
 			else { // deterministic leadtime
 				int64_t loc = (state.max_leadtime == 0 ? 1 : state.max_leadtime);
-				int64_t expected = state.state_vector.at(max_leadtime - loc);
+				int64_t& expected = state.state_vector.at(max_leadtime - loc);
 				if (!state.randomYield) { // deterministic leadtime no yield
 					if (expected > 0) {
-						state.state_vector.at(max_leadtime - loc) = 0;
 						if (state.max_leadtime == 0)
 							onHand += expected;
 						else
 							new_coming_orders += expected;
+						expected = 0;
 					}
 				}
 				else { // deterministic leadtime random yield
 					if (state.yield_when_realized) { // deterministic leadtime random yield realized when received
 						if (expected > 0) {
-							state.state_vector.at(max_leadtime - loc) = 0;
 							int64_t received = OrderArrivals(state, expected, event.second.front(), state.censoredRandomYield);
 							state.total_inv -= (expected - received);
 							if (state.max_leadtime == 0)
 								onHand += received;
 							else
 								new_coming_orders += received;
+							expected = 0;
 						}
 					}
 					else { // deterministic leadtime random yield realized before shipment
 						int64_t last_order = state.state_vector.back();
-						int64_t to_be_received = last_order;
-						if (to_be_received > 0) {
-							to_be_received = OrderArrivals(state, last_order, event.second.front(), false);
-						}
+						int64_t to_be_received = (last_order > 0) ? OrderArrivals(state, last_order, event.second.front(), false) : 0;
 						state.pipeline_vector.push_back(to_be_received);
 						if (expected > 0) {
-							int64_t received = state.pipeline_vector.at(max_leadtime - loc);
-							state.state_vector.at(max_leadtime - loc) = 0;
-							state.pipeline_vector.at(max_leadtime - loc) = 0;
+							int64_t& received = state.pipeline_vector.at(max_leadtime - loc);
 							state.total_inv -= (expected - received);
 							if (state.censoredRandomYield) {
 								state.random_yield_statistics[expected].first += received;
@@ -996,6 +948,8 @@ namespace DynaPlex::Models {
 								onHand += received;
 							else
 								new_coming_orders += received;
+							expected = 0;
+							received = 0;
 						}
 						state.pipeline_vector.pop_front();
 					}
@@ -1138,11 +1092,8 @@ namespace DynaPlex::Models {
 			}
 
 			if (state.censoredRandomYield && updateStatistics) {
-				std::cout << "--Before" << state.random_yield_statistics[num_orders_expected].second << "--" << std::endl;
 				state.random_yield_statistics[num_orders_expected].first += received_orders;
 				state.random_yield_statistics[num_orders_expected].second += num_orders_expected;
-				std::cout << "Num orders expected: " << num_orders_expected << " --received_orders:" << received_orders << std::endl;
-				std::cout << "--After" << state.random_yield_statistics[num_orders_expected].second << "--" << std::endl;
 			}
 
 			return received_orders;
@@ -1517,7 +1468,6 @@ namespace DynaPlex::Models {
 						}
 					}
 				}
-				state.limitingPeriod = std::max(state.max_leadtime, (int64_t)state.demand_cycles.size());
 			}
 
 			if (state.min_leadtime == state.max_leadtime) {
@@ -1680,7 +1630,7 @@ namespace DynaPlex::Models {
 
 			if (train_random_yield) {
 				if (state.randomYield) {
-					int64_t MaxOrderWithYield = static_cast<int64_t>(std::floor((double) state.MaxOrderSize_Limit * (1 / min_randomYield)));
+					int64_t MaxOrderWithYield = static_cast<int64_t>(std::ceil((double) state.MaxOrderSize_Limit * (1 / min_randomYield)));
 					state.MaxOrderSize_Limit = std::min(MaxOrderSize, MaxOrderWithYield);
 					state.random_yield_features.reserve(state.MaxOrderSize_Limit + 1);
 					state.random_yield_features.push_back(0.0);
@@ -1866,34 +1816,24 @@ namespace DynaPlex::Models {
 							}
 						}
 						if (state.censoredRandomYield) {
-							state.random_yield_statistics.reserve(state.MaxOrderSize_Limit + 1);
+							state.random_yield_statistics.reserve(MaxOrderSize + 1);
 							state.random_yield_statistics.push_back({ static_cast<int64_t>(0), static_cast<int64_t>(0) });
-							for (int64_t i = 1; i <= state.MaxOrderSize_Limit; i++) {
+							for (int64_t i = 1; i <= MaxOrderSize; i++) {
 								state.random_yield_statistics.push_back({ static_cast<int64_t>(0), static_cast<int64_t>(0) });
 								state.random_yield_features.push_back(1.0);
 							}
 						}
 					}
 					if (!state.censoredRandomYield) {
-						if (!state.censoredDemand) {
-							for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
-								for (int64_t j = state.cycle_MaxOrderSize[i]; j <= state.MaxOrderSize_Limit; j++) {
-									if (static_cast<int64_t>(std::floor(j * state.random_yield_features[j])) >= state.cycle_MaxOrderSize[i]) {
-										state.cycle_MaxOrderSize[i] = j;
-										break;
-									}
-								}
-							}
-							state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
-						}
-						else {
-							for (int64_t i = state.MaxOrderSize; i <= state.MaxOrderSize_Limit; i++) {
-								if (static_cast<int64_t>(std::floor(i * state.random_yield_features[i])) >= state.MaxOrderSize) {
-									state.MaxOrderSize = i;
+						for (int64_t i = 0; i < state.demand_cycles.size(); i++) {
+							for (int64_t j = state.cycle_MaxOrderSize[i]; j <= state.MaxOrderSize_Limit; j++) {
+								if (static_cast<int64_t>(std::floor(j * state.random_yield_features[j])) >= state.cycle_MaxOrderSize[i]) {
+									state.cycle_MaxOrderSize[i] = j;
 									break;
 								}
 							}
 						}
+						state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
 					}
 					double expected_total_inv = static_cast<double>(state.state_vector.front());
 					for (int64_t i = 1; i < max_leadtime; i++) {
@@ -1982,7 +1922,7 @@ namespace DynaPlex::Models {
 				total_probs = 1.0;
 				dist_type = "Deterministic";
 			}
-			else if (rng.genUniform() < 0.2) {
+			else if (rng.genUniform() < 0.33) {
 				double prob = 1.0 / possible_leadtimes;
 				for (int64_t i = min_lt; i <= max_lt; i++) {
 					dummy_leadtime_probs[i] = prob;
@@ -1991,8 +1931,8 @@ namespace DynaPlex::Models {
 				dist_type = "Uniform";
 			}
 			else {
-				double mean = rng.genUniform() * (max_lt - min_lt) + min_lt;
-				if (mean > 2.0) {
+				double mean = (double)(max_lt - min_lt) / 2.0;
+				if (rng.genUniform() < 0.5 && mean > 2.0) {
 					double min_var = DiscreteDist::LeastVarianceRequiredForAERFit(mean);
 					double min_std = std::sqrt(min_var);
 					double stdev = rng.genUniform() * (mean * 2.0 - min_std) + min_std;
