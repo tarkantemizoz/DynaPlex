@@ -412,6 +412,9 @@ namespace DynaPlex
 		auto copy = PMF;
 		//Sorts in ascending order for numerical stability.
 		std::sort(copy.begin(), copy.end());
+		if (std::any_of(copy.begin(), copy.end(), [](double num) { return std::isnan(num); })) {
+			std::cout << "There is nan in copy:  " << std::endl;;
+		}
 		if (copy[0] < 0.0)
 		{//negative probabilities are not allowed.
 			return false;
@@ -693,6 +696,8 @@ namespace DynaPlex
 		}
 		double total_prob = 0.0;
 		for (int64_t i = 0; i < probs_vec.size(); i++) {
+			if (probs_vec[i] < 0.0)
+				throw DynaPlex::Error("DiscreteDist: In MultipleMix probability is negative.");
 			total_prob += probs_vec[i];
 		}
 		if (std::abs(total_prob - 1.0) >= 1e-8)
@@ -707,12 +712,16 @@ namespace DynaPlex
 				maxResult = dist_vec[i].Max();
 		}
 
+		double total_prob_v1 = 0.0;
+		bool nandetected = false;
 		std::vector<double> PMFResult(static_cast<size_t>(maxResult - mixedMin + 1ll), 0.0);
 		for (size_t i = mixedMin; i <= maxResult; ++i) {
 			for (size_t j = 0; j < dist_vec.size(); j++) {
-				PMFResult[i - mixedMin] += dist_vec[j].ProbabilityAt(i) * probs_vec[j];
+				double prob = dist_vec[j].ProbabilityAt(i) * probs_vec[j];
+				PMFResult[i - mixedMin] += prob;
 			}
 		}
+
 		Trim(PMFResult, mixedMin);
 
 		return DiscreteDist(PMFResult, mixedMin);

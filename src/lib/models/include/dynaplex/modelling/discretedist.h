@@ -2,6 +2,8 @@
 #include <vector>
 #include <dynaplex/vargroup.h>
 #include <dynaplex/rng.h>
+#include <iostream>
+#include <cmath> 
 
 namespace DynaPlex
 {

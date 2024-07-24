@@ -818,7 +818,7 @@ void TrainNetwork() {
 
 	DynaPlex::VarGroup nn_training{
 		{"early_stopping_patience",15},
-		{"mini_batch_size", 1024},
+		{"mini_batch_size", 2048},
 		{"max_training_epochs", 100}
 	};
 
@@ -844,7 +844,7 @@ void TrainNetwork() {
 	//std::string loc = "dcl_" + id + exp_num;
 	//dp.System() << "Network id:  " << loc << std::endl;
 
-	std::string id = "GC-LSN";
+	std::string id = "GC-LSN-Big";
 	std::string exp_num = "_tsl_tcd_try";
 	std::string loc = id + exp_num;
 	dp.System() << "Network id:  " << loc << std::endl;
@@ -858,10 +858,10 @@ void TrainNetwork() {
 	config.Add("evaluate", false);
 	config.Add("train_stochastic_leadtimes", true);
 	config.Add("train_cyclic_demand", true);
-	config.Add("train_random_yield", true);
+	config.Add("train_random_yield", false);
 	config.Add("discount_factor", 1.0);
 	config.Add("max_demand", 12.0);
-	config.Add("max_p", 100.0);
+	config.Add("max_p", 100.01);
 	config.Add("max_leadtime", 10);
 	config.Add("max_num_cycles", 7);
 

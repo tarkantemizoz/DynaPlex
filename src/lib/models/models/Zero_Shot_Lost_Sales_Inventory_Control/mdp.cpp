@@ -102,7 +102,6 @@ namespace DynaPlex::Models {
 					std::vector<double> probs(max_leadtime + 1, 0.0);
 					leadtime_probs = probs;
 					censoredLeadtime = false;
-					order_crossover = false;
 					int64_t leadtime;
 					config.Get("leadtime", leadtime);
 					if (leadtime > max_leadtime || leadtime < min_leadtime)
@@ -119,15 +118,10 @@ namespace DynaPlex::Models {
 					if (config.HasKey("order_crossover"))
 						config.Get("order_crossover", order_crossover);
 
-					double total_probs = 0.0;
 					if (order_crossover) {
 						config.Get("leadtime_distribution", leadtime_probs);
 						if (leadtime_probs.size() != max_leadtime + 1)
 							throw DynaPlex::Error("MDP instance: Size of leadtime probability vector should be max_leadtime + 1.");
-						for (const auto& prob : leadtime_probs)
-						{
-							total_probs += prob;
-						}
 					}
 					else {
 						config.Get("leadtime_distribution", non_crossing_leadtime_rv_probs);
@@ -136,40 +130,46 @@ namespace DynaPlex::Models {
 						double total_prob_v2 = 0.0;
 						for (const auto& prob : non_crossing_leadtime_rv_probs)
 						{
-							total_prob_v2 += prob;
 							if (prob < 0.0)
 								throw DynaPlex::Error("MDP instance: non-crossover lead time probability is negative.");
+							total_prob_v2 += prob;
 						}
 						if (std::abs(total_prob_v2 - 1.0) >= 1e-8)
 							throw DynaPlex::Error("MDP instance: non-crossover total lead time probability should be 1.0.");
 
 						std::vector<double> cumul_probs(max_leadtime + 1, 0.0);
-						double total_prob_cumul = 0.0;
-						for (int64_t i = 0; i < max_leadtime + 1; i++) {
-							cumul_probs[i] = non_crossing_leadtime_rv_probs[i] + total_prob_cumul;
-							total_prob_cumul += non_crossing_leadtime_rv_probs[i];
+						double total_prob_v1 = 0.0;
+						for (int64_t i = 0; i <= max_leadtime; i++) {
+							cumul_probs[i] = non_crossing_leadtime_rv_probs[i] + total_prob_v1;
+							total_prob_v1 += non_crossing_leadtime_rv_probs[i];
 						}
 						std::vector<double> probs(max_leadtime + 1, 0.0);
 						leadtime_probs = probs;
-						leadtime_probs[0] = non_crossing_leadtime_rv_probs[0];
-						for (int64_t i = 1; i < max_leadtime + 1; i++) {
+						double total_probs = 0.0;
+						for (int64_t i = 0; i <= max_leadtime; i++) {
 							double prob = 1.0;
 							for (int64_t j = 0; j < i; j++) {
 								prob *= std::max(0.0, 1.0 - cumul_probs[j]);
 							}
-							prob *= cumul_probs[i];
+							prob *= std::max(0.0, cumul_probs[i]);
 							leadtime_probs[i] = prob;
 							total_probs += prob;
 						}
+						// Normalize the probabilities if the total differs from 1
+						if (std::abs(total_probs - 1.0) >= 1e-8) {
+							for (double& prob : leadtime_probs) {
+								prob /= total_probs;
+							}
+						}
 					}
-					double total_prob_v2 = 0.0;
+					double total_probs = 0.0;
 					for (const auto& prob : leadtime_probs)
 					{
-						total_prob_v2 += prob;
 						if (prob < 0.0)
 							throw DynaPlex::Error("MDP instance: lead time probability is negative.");
+						total_probs += prob;
 					}
-					if (std::abs(total_prob_v2 - 1.0) >= 1e-8)
+					if (std::abs(total_probs - 1.0) >= 1e-8)
 						throw DynaPlex::Error("MDP instance: total lead time probability should be 1.0.");
 				}
 				else {
@@ -1313,18 +1313,16 @@ namespace DynaPlex::Models {
 		}
 
 		void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
-			if (train_stochastic_leadtimes) {
-				if (state.order_crossover)
-					features.Add(1);
-				else
-					features.Add(0);
-			}
 			features.Add(state.p);
 			features.Add(state.state_vector);
 			if (train_stochastic_leadtimes) {
 				for (int64_t i = max_leadtime; i >= 0; i--) {
 					features.Add(state.estimated_leadtime_probs[i]);
 				}
+				if (state.order_crossover)
+					features.Add(1);
+				else
+					features.Add(0);
 			}
 			else {
 				features.Add(state.min_leadtime);
@@ -1527,9 +1525,9 @@ namespace DynaPlex::Models {
 						double total_prob_v2 = 0.0;
 						for (const auto& prob : state.estimated_leadtime_probs)
 						{
-							total_prob_v2 += prob;
 							if (prob < 0.0)
 								throw DynaPlex::Error("Initiate state: non-crossover lead time probability is negative.");
+							total_prob_v2 += prob;
 						}
 						if (std::abs(total_prob_v2 - 1.0) >= 1e-8)
 							throw DynaPlex::Error("Initiate state: non-crossover total lead time probability should be 1.0.");
@@ -1931,7 +1929,7 @@ namespace DynaPlex::Models {
 				dist_type = "Uniform";
 			}
 			else {
-				double mean = (double)(max_lt - min_lt) / 2.0;
+				double mean = (double)(max_lt + min_lt) / 2.0;
 				if (rng.genUniform() < 0.5 && mean > 2.0) {
 					double min_var = DiscreteDist::LeastVarianceRequiredForAERFit(mean);
 					double min_std = std::sqrt(min_var);
@@ -1964,13 +1962,16 @@ namespace DynaPlex::Models {
 					prob /= total_probs;
 				}
 			}
+			if (std::any_of(dummy_leadtime_probs.begin(), dummy_leadtime_probs.end(), [](double num) { return std::isnan(num); })) {
+				throw DynaPlex::Error("Initiate state: sample lead time: probability value is Nan. Dist: " + dist_type);
+			}
 
 			double total_prob_v2 = 0.0;
 			for (const auto& prob : dummy_leadtime_probs)
 			{
-				total_prob_v2 += prob;
 				if (prob < 0.0)
 					throw DynaPlex::Error("Initiate state: sample lead time: lead time probability is negative. Dist: " + dist_type);
+				total_prob_v2 += prob;
 			}
 			if (std::abs(total_prob_v2 - 1.0) >= 1e-8)
 				throw DynaPlex::Error("Initiate state - sample lead time: total lead time probabilities should sum up to 1.0. Dist: " + dist_type);
