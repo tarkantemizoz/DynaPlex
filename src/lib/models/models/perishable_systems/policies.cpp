@@ -13,8 +13,8 @@ namespace DynaPlex::Models {
 
 		int64_t BaseStockPolicy::GetAction(const MDP::State& state) const
 		{
-			if (base_stock_level > state.state_vector.back()) {
-				return base_stock_level - state.state_vector.back();
+			if (base_stock_level > state.total_inv) {
+				return base_stock_level - state.total_inv;
 			}
 			else {
 				return 0;

@@ -21,14 +21,9 @@ namespace DynaPlex::Models {
 
 		double MDP::ModifyStateWithAction(State& state, int64_t action) const
 		{
-			if (!IsAllowedAction(state, action))
-			{
-				throw DynaPlex::Error("Perishable inventory systems: action not allowed: inventory position: " + std::to_string(state.state_vector.back()) + "  action: " + std::to_string(action) + "  MaxSystemInv: " + std::to_string(MaxSystemInv));
-			}
-
 			double cost = c * action;
-			auto inv = state.state_vector.back() + action;
-			state.state_vector.push_back(inv);
+			state.state_vector.push_back(action);
+			state.total_inv += action;
 			state.cat = StateCategory::AwaitEvent();
 
 			return cost;
@@ -46,6 +41,7 @@ namespace DynaPlex::Models {
 			config.Get("cvr", cvr);
 			config.Get("LeadTime", LeadTime);
 			config.Get("ProductLife", ProductLife);
+			config.Get("enable_seq_halving", enable_seq_halving);
 
 			double st_dev = cvr * std::sqrt(mu);
 
@@ -102,63 +98,49 @@ namespace DynaPlex::Models {
 		{
 			state.cat = StateCategory::AwaitAction();
 
-			int64_t onHand = state.state_vector.at(ProductLife - 1);			
+			int64_t onHand = 0;
+			for (size_t i = 0; i < ProductLife; i++) {
+				onHand += state.state_vector.at(i);
+			}
 			int64_t FIFOdemand = demand_combination_holder[event][0];
 			int64_t LIFOdemand = demand_combination_holder[event][1];
 			int64_t TotalDemand = FIFOdemand + LIFOdemand;
 
-			double cost{ 0.0 };
-			int64_t InvDecrease{ 0 };
+			double cost = 0.0;
 			// First check if there is enough on hand inventory
 			if (onHand < TotalDemand) {
-				InvDecrease = onHand;
 				cost += p * (TotalDemand - onHand);
 				state.state_vector.pop_front();
+				state.total_inv -= onHand;
 
-				for (size_t i = 0; i < ProductLife - 1; i++) {
+				for (int64_t i = 0; i < ProductLife - 1; i++) {
 					state.state_vector.at(i) = 0;
 				}
 			}
 			else {
 				// Meet fifo demand
 				if (FIFOdemand > 0) {
-					for (size_t i = 0; i < ProductLife; i++) {
-						if (state.state_vector.at(i) <= FIFOdemand) {
-							state.state_vector.at(i) = 0;
-						}
-						else {
-							state.state_vector.at(i) -= FIFOdemand;
+					for (int64_t i = 0; i < ProductLife; i++) {
+						int64_t inv = state.state_vector.at(i);
+						if (inv > 0 && FIFOdemand > 0) {
+							state.state_vector.at(i) = std::max((int64_t)0, inv - FIFOdemand);
+							FIFOdemand = std::max((int64_t)0, FIFOdemand - inv);
 						}
 					}
 				}
-
-				int64_t perishedInv = state.state_vector.pop_front();
-
-				// Meet lifo demand
 				if (LIFOdemand > 0) {
-					int64_t Inv = state.state_vector.at(ProductLife - 2) - LIFOdemand;
-					perishedInv = std::min(Inv, perishedInv);
-					for (size_t i = 0; i < ProductLife - 1; i++) {
-						int64_t curInv = state.state_vector.at(i);
-						state.state_vector.at(i) = std::min(Inv, curInv) - perishedInv;
+					for (int64_t i = ProductLife - 1; i >= 0; i--) {
+						int64_t inv = state.state_vector.at(i);
+						if (inv > 0 && LIFOdemand > 0) {
+							state.state_vector.at(i) = std::max((int64_t)0, inv - LIFOdemand);
+							LIFOdemand = std::max((int64_t)0, LIFOdemand - inv);
+						}
 					}
 				}
-				else {
-					for (size_t i = 0; i < ProductLife - 1; i++) {
-						state.state_vector.at(i) -= perishedInv;
-					}
-				}
-
-				InvDecrease = TotalDemand + perishedInv;
+				int64_t perishedInv = state.state_vector.pop_front();
+				state.total_inv -= (perishedInv + TotalDemand);
 				cost += o * perishedInv;
-				if (ProductLife > 1 && h > 0.0) {
-					cost += h * state.state_vector.at(ProductLife - 2);
-				}
-			}
-
-			for (size_t i = ProductLife - 1; i < ProductLife + LeadTime - 1; i++)
-			{
-				state.state_vector.at(i) -= InvDecrease;
+				cost += h * (onHand - TotalDemand);
 			}
 
 			return cost;
@@ -183,7 +165,7 @@ namespace DynaPlex::Models {
 		}
 
 		bool MDP::IsAllowedAction(const State& state, int64_t action) const {
-			return (state.state_vector.back() + action) <= MaxSystemInv || action == 0;
+			return (state.total_inv + action) <= MaxSystemInv || action == 0;
 		}
 
 		MDP::State MDP::GetInitialState() const
@@ -198,6 +180,7 @@ namespace DynaPlex::Models {
 			State state{};
 			state.cat = StateCategory::AwaitAction();
 			state.state_vector = queue;
+			state.total_inv = queue.sum();
 
 			return state;
 		}
@@ -207,6 +190,7 @@ namespace DynaPlex::Models {
 			State state{};
 			vars.Get("cat", state.cat);
 			vars.Get("state_vector", state.state_vector);
+			vars.Get("total_inv", state.total_inv);
 			return state;
 		}
 
@@ -215,6 +199,7 @@ namespace DynaPlex::Models {
 			DynaPlex::VarGroup vars;
 			vars.Add("cat", cat);
 			vars.Add("state_vector", state_vector);
+			vars.Add("total_inv", total_inv);
 			return vars;
 		}
 

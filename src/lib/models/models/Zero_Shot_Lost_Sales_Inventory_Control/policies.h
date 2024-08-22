@@ -10,6 +10,16 @@ namespace DynaPlex::Models {
 	{
 		class MDP;
 
+		//class DynamicBaseStockPolicies
+		//{
+		//	std::shared_ptr<const MDP> mdp;
+		//	const VarGroup varGroup;
+		//	int64_t co_level;
+		//public:
+		//	DynamicBaseStockPolicies(std::shared_ptr<const MDP> mdp, const VarGroup& config);
+		//	int64_t GetAction(const MDP::State& state) const;
+		//};
+
 		class ConstantOrderPolicy
 		{
 			std::shared_ptr<const MDP> mdp;

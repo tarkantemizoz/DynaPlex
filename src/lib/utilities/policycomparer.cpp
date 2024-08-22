@@ -197,11 +197,11 @@ namespace DynaPlex::Utilities {
 			DynaPlex::VarGroup forPolicy{};
 			forPolicy.Add("policy", policy->GetConfig());
 			forPolicy.Add("mean", comparison.mean(i));
-			forPolicy.Add("error", comparison.standardError(i));
+			//forPolicy.Add("error", comparison.standardError(i));
 			if (i > minusone)
 			{
 				forPolicy.Add("mean_difference", comparison.mean(i, index_of_benchmark));
-				forPolicy.Add("error_difference", comparison.standardError(i, index_of_benchmark));
+				//forPolicy.Add("error_difference", comparison.standardError(i, index_of_benchmark));
 			}
 			if (compute_gap)
 			{

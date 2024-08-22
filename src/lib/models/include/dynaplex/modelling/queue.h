@@ -139,14 +139,14 @@ namespace DynaPlex {
 
 		T& back() {
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - back");
 			}
 			return items[GetVectorIndex(first_item + num_items - 1)];
 		}
 
 		const T& back() const {
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - back");
 			}
 			return items[GetVectorIndex(first_item + num_items - 1)];
 		}
@@ -157,7 +157,7 @@ namespace DynaPlex {
 
 		T pop_front() {
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - pop_front");
 			}
 			T front = items[first_item];
 			items[first_item++] = T{};
@@ -170,14 +170,14 @@ namespace DynaPlex {
 
 		T& front() {
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - front");
 			}
 			return items[first_item];
 		}
 
 		const T& front() const {
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - front");
 			}
 			return items[first_item];
 		}
@@ -185,7 +185,7 @@ namespace DynaPlex {
 		T& at(size_t loc)
 		{
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - at");
 			}
 			if (loc >= num_items) {
 				throw DynaPlex::Error("Queue: length error");
@@ -196,7 +196,7 @@ namespace DynaPlex {
 		const T& at(size_t loc) const
 		{
 			if (IsEmpty()) {
-				throw DynaPlex::Error("Queue: queue is empty");
+				throw DynaPlex::Error("Queue: queue is empty - at");
 			}
 			if (loc >= num_items) {
 				throw DynaPlex::Error("Queue: length error");

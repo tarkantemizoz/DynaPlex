@@ -22,6 +22,7 @@ namespace DynaPlex::Models {
 			int64_t ProductLife;
 			double f, mu, cvr; //issuance policy ratio, mean demand, square root of variance over mean
 
+			bool enable_seq_halving;
 			int64_t MaxSystemInv;
 			DynaPlex::JointDiscreteDist demand_dist;
 			std::vector<std::vector<int64_t>> demand_combination_holder;
@@ -36,6 +37,7 @@ namespace DynaPlex::Models {
 
 				//Other members depend on the MDP:
 				Queue<int64_t> state_vector;
+				int64_t total_inv;
 
 				//declaration; for definition see mdp.cpp:
 				DynaPlex::VarGroup ToVarGroup() const;

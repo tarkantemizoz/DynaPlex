@@ -21,11 +21,9 @@ namespace DynaPlex::Models {
 			std::vector<double> stdDemand;
 			std::vector<double> leadtime_probs;
 			std::vector<double> non_crossing_leadtime_rv_probs;
-			double max_demand, min_demand;
+			double max_demand, min_demand, max_period_demand;
 
 			bool evaluate;
-			bool returnRewards;
-			bool collectStatistics;
 			bool train_stochastic_leadtimes;
 			bool train_cyclic_demand;
 			bool train_random_yield;
@@ -47,23 +45,22 @@ namespace DynaPlex::Models {
 			double p_var;
 			double alpha_var;
 			double k_var;
-			bool include_all_features = false;
-			bool include_allowed = false;
+			bool include_all_features = true;
 			int64_t randomYield_features_size = 5;
 
 			struct State {
 				DynaPlex::StateCategory cat;
 
 				int64_t period;
+				int64_t cycle_length;
 				std::vector<int64_t> demand_cycles;
-				int64_t order_initializationPhase;
+				std::vector<bool> collectDemandStatistics;
 
 				Queue<int64_t> state_vector;
 				Queue<int64_t> received_orders_vector;
 				Queue<int64_t> pipeline_vector;
 				Queue<int64_t> dummy_pipeline_vector;
 				int64_t total_inv;
-				int64_t effective_total_inv;
 
 				std::vector<std::vector<int64_t>> past_demands;
 				std::vector<std::vector<int64_t>> cumulative_demands;

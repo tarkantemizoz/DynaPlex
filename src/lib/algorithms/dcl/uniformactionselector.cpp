@@ -17,7 +17,7 @@ namespace DynaPlex::DCL {
 
 	}
 
-	bool adopt_crn = true;
+	bool adopt_crn = false;
 	int64_t max_chunk_size = 256;
 	int64_t max_steps_until_completion_expected = 1000000;
 	void UniformActionSelector::SetAction(DynaPlex::Trajectory& traj, DynaPlex::NN::Sample& sample, int64_t seed, const int64_t H, const int64_t M) const

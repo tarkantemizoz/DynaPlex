@@ -1,9 +1,49 @@
 #include "policies.h"
 #include "mdp.h"
 #include "dynaplex/error.h"
+#include "dynaplex/trajectory.h"
+
+
 namespace DynaPlex::Models {
 	namespace Zero_Shot_Lost_Sales_Inventory_Control
 	{
+		//DynamicBaseStockPolicies::DynamicBaseStockPolicies(std::shared_ptr<const MDP> mdp, const VarGroup& config)
+		//	:mdp{ mdp }
+		//{
+		//	config.Get("co_level", co_level);
+		//}
+
+		//int64_t DynamicBaseStockPolicies::GetAction(const MDP::State& state) const
+		//{
+
+
+
+		//	using dp_State = std::unique_ptr<StateBase>;
+		//	dp_State dummystate = state;
+		//	auto& t_state = ToState(state);
+		//	dp_State other = state->Clone()
+
+
+		//	std::vector<DynaPlex::Trajectory> trajectories{};
+		//	trajectories.reserve(100);
+
+
+		//	for (int64_t experiment_number = 0; experiment_number < 100; experiment_number++)
+		//	{
+		//		trajectories.emplace_back(experiment_number + 0);
+		//		trajectories.back().RNGProvider.SeedEventStreams(true, 123, experiment_number + 213);
+		//	}
+		//	for (DynaPlex::Trajectory& traj : trajectories)
+		//	{
+		//		traj.Reset(state);
+		//		auto& t_state = ToState(traj.GetState());
+		//		traj.Category = mdp->GetStateCategory(t_state);
+		//	}
+
+		//	return co_level;
+		//}
+
+
 		ConstantOrderPolicy::ConstantOrderPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config)
 			:mdp{ mdp }
 		{
