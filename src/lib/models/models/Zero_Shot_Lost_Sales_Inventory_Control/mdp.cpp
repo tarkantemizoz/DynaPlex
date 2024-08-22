@@ -313,9 +313,6 @@ namespace DynaPlex::Models {
 
 		double MDP::ModifyStateWithEvent(State& state, const MDP::Event& event) const
 		{
-			if (state.censoredLeadtime)
-				std::cout << " here  " << state.mean_cycle_demand[state.period] << std::endl;
-
 			state.cat = StateCategory::AwaitAction();
 			int64_t orders_received = state.orders_received;
 			int64_t onHand = state.state_vector.pop_front();
@@ -931,9 +928,6 @@ namespace DynaPlex::Models {
 					state.collectDemandStatistics[state.period] = true;
 			}				
 
-			if (state.censoredLeadtime)
-				std::cout << " ---there  " << state.mean_cycle_demand[state.period] << std::endl;
-
 			int64_t demand = event.first;
 			double cost{ 0.0 };
 			bool uncensored = true;
@@ -964,22 +958,23 @@ namespace DynaPlex::Models {
 			state.state_vector.front() = onHand + new_coming_orders;
 
 			if (state.collectStatistics) {
-				if (state.censoredLeadtime)
-					std::cout << " ---there inside  " << state.mean_cycle_demand[state.period] << std::endl;
 				if (state.censoredLeadtime && state.orders_received > orders_received)
 					UpdateLeadTimeStatistics(state);
 				if (state.censoredDemand && state.collectDemandStatistics[state.period])
-					UpdateDemandStatistics(state, uncensored, demand); // Call Kaplan - Meier Estimator			
+					UpdateDemandStatistics(state, uncensored, demand); // Call Kaplan - Meier Estimator		
 				int64_t old_period = state.period;
 				state.period++;
 				state.period = state.period % state.cycle_length;
-				if (state.collectDemandStatistics[old_period] || state.orders_received > orders_received) {
-					UpdateOrderLimits(state);
-				}
-				else {
-					state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
-					state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];			
-				}
+				UpdateOrderLimits(state);
+				//if (state.collectDemandStatistics[old_period] || state.orders_received > orders_received) {
+				//	std::cout << " ---there inside4  " << state.period << "  " << state.cycle_length << std::endl;
+				//	UpdateOrderLimits(state);
+				//}
+				//else {
+				//	std::cout << " ---there inside else " << state.orders_received << "  " << orders_received << std::endl;
+				//	state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
+				//	state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];			
+				//}
 			}
 			else {
 				state.period++;
@@ -1098,8 +1093,6 @@ namespace DynaPlex::Models {
 		}
 
 		void MDP::UpdateLeadTimeStatistics(State& state) const {
-			std::cout << " ---there lead time  " << state.mean_cycle_demand[state.period] << std::endl;
-
 			std::vector<int64_t> dummy_past_leadtimes = state.past_leadtimes;
 			int64_t dummy_orders_received = state.orders_received;
 			if (state.estimated_max_leadtime < max_leadtime) {
@@ -1526,8 +1519,6 @@ namespace DynaPlex::Models {
 				true_demand_probs.push_back(probs);
 				state.cumulativePMFs.push_back(cumul_probs);
 			}
-			if (state.censoredLeadtime)
-				std::cout << " ---collectStatistics  " << std::endl;
 
 			if (state.collectStatistics) {
 				state.cycle_probs.reserve(state.cycle_length);
@@ -1551,8 +1542,6 @@ namespace DynaPlex::Models {
 					}
 				}
 			}
-			if (state.censoredLeadtime)
-				std::cout << " ---collectStatisticsend  " << std::endl;
 
 			state.MaxOrderSize_Limit = 0;
 			std::vector<double> probs_vec(state.estimated_leadtime_probs.begin() + state.estimated_min_leadtime, state.estimated_leadtime_probs.begin() + state.estimated_max_leadtime + 1);
@@ -1589,8 +1578,6 @@ namespace DynaPlex::Models {
 			state.MaxOrderSize_Limit = state.censoredDemand ? MaxOrderSize : std::min(MaxOrderSize, state.MaxOrderSize_Limit);		
 			state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];
 			state.OrderConstraint = std::max(static_cast<int64_t>(0), std::min(state.MaxSystemInv - state.total_inv, state.MaxOrderSize));
-			if (state.censoredLeadtime)
-				std::cout << " ---initend  " << std::endl;
 
 			if (train_random_yield) {
 				if (state.randomYield) {

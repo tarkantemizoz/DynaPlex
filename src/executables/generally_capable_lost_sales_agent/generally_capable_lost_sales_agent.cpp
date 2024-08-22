@@ -419,14 +419,14 @@ void Case3Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 					mdp_config.Set("p", p);
 					instance_config.Set("p", p);
 
-					//mdp_config.Set("censoredDemand", false);
-					//mdp_config.Set("censoredLeadtime", false);
-					//int64_t BestBSLevel = FindBestBSLevel(mdp_config);
-					//int64_t BestCOLevel = FindCOLevel(mdp_config);
-					//std::pair<int64_t, int64_t> bounds = ReturnBounds(p / (p + 1.0), leadtime_dist, demand_cycles, mean_demand, std_demand);
-					//std::pair<int64_t, int64_t> bestParams = FindCBSLevels(mdp_config, BestBSLevel, bounds.second, BestCOLevel, bounds.first);
-					//int64_t BestSLevel = bestParams.first;
-					//int64_t BestrLevel = bestParams.second;
+					mdp_config.Set("censoredDemand", false);
+					mdp_config.Set("censoredLeadtime", false);
+					int64_t BestBSLevel = FindBestBSLevel(mdp_config);
+					int64_t BestCOLevel = FindCOLevel(mdp_config);
+					std::pair<int64_t, int64_t> bounds = ReturnBounds(p / (p + 1.0), leadtime_dist, demand_cycles, mean_demand, std_demand);
+					std::pair<int64_t, int64_t> bestParams = FindCBSLevels(mdp_config, BestBSLevel, bounds.second, BestCOLevel, bounds.first);
+					int64_t BestSLevel = bestParams.first;
+					int64_t BestrLevel = bestParams.second;
 
 					std::vector<bool> censoredLeadTime_vec = { false, true };
 					std::vector<bool> censoredDemand_vec = { false, true };
@@ -444,19 +444,19 @@ void Case3Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 							DynaPlex::VarGroup policy_config;
 							std::vector<DynaPlex::Policy> policies;
 
-							//policy_config.Add("id", "base_stock");
-							//policy_config.Add("base_stock_level", BestBSLevel);
-							//auto best_bs_policy = test_mdp->GetPolicy(policy_config);
-							//policies.push_back(best_bs_policy);
+							policy_config.Add("id", "base_stock");
+							policy_config.Add("base_stock_level", BestBSLevel);
+							auto best_bs_policy = test_mdp->GetPolicy(policy_config);
+							policies.push_back(best_bs_policy);
 
-							//policy_config.Set("id", "capped_base_stock");
-							//policy_config.Set("S", BestSLevel);
-							//policy_config.Set("r", BestrLevel);
-							//auto best_cbs_policy = test_mdp->GetPolicy(policy_config);
-							//policies.push_back(best_cbs_policy);
+							policy_config.Set("id", "capped_base_stock");
+							policy_config.Set("S", BestSLevel);
+							policy_config.Set("r", BestrLevel);
+							auto best_cbs_policy = test_mdp->GetPolicy(policy_config);
+							policies.push_back(best_cbs_policy);
 
-							//auto initial_policy = test_mdp->GetPolicy("greedy_capped_base_stock");
-							//policies.push_back(initial_policy);
+							auto initial_policy = test_mdp->GetPolicy("greedy_capped_base_stock");
+							policies.push_back(initial_policy);
 
 							auto path = dp.System().filepath(nn_loc, "dcl_gen" + nn_num_gen);
 							auto nn_policy = dp.LoadPolicy(test_mdp, path);
@@ -1295,6 +1295,7 @@ void TrainNetwork() {
 	if (dp.System().WorldRank() == 0 && evaluate_all_instances_case3)
 	{
 		Case3Results(config, loc, 5);
+		Case2Results(config, loc, 5);
 	}
 }
 
