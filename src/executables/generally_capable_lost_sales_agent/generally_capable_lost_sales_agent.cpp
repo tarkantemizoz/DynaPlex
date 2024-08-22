@@ -202,7 +202,7 @@ std::vector<std::vector<double>> TestPolicies(std::vector<DynaPlex::Policy> poli
 	auto& dp = DynaPlexProvider::Get();
 
 	DynaPlex::VarGroup test_config;
-	test_config.Add("number_of_trajectories", 1);
+	test_config.Add("number_of_trajectories", 1000);
 	if (censoredProblem) {
 		test_config.Add("warmup_periods", 0);
 	}
