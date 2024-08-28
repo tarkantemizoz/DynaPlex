@@ -966,15 +966,6 @@ namespace DynaPlex::Models {
 				state.period++;
 				state.period = state.period % state.cycle_length;
 				UpdateOrderLimits(state);
-				//if (state.collectDemandStatistics[old_period] || state.orders_received > orders_received) {
-				//	std::cout << " ---there inside4  " << state.period << "  " << state.cycle_length << std::endl;
-				//	UpdateOrderLimits(state);
-				//}
-				//else {
-				//	std::cout << " ---there inside else " << state.orders_received << "  " << orders_received << std::endl;
-				//	state.MaxOrderSize = state.cycle_MaxOrderSize[state.period];
-				//	state.MaxSystemInv = state.cycle_MaxSystemInv[state.period];			
-				//}
 			}
 			else {
 				state.period++;

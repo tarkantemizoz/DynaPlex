@@ -10,18 +10,23 @@ namespace DynaPlex::Models {
 			:mdp{ mdp }
 		{
 			config.GetOrDefault("base_stock_level", base_stock_level, mdp->MaxSystemInv);
+			config.GetOrDefault("capped", capped, true);
 		}
 
 		int64_t BaseStockPolicy::GetAction(const MDP::State& state) const
 		{
-			int64_t action = base_stock_level - state.total_inv;
-			//We maximize, so actually this is capped base-stock. 
-			if (action > mdp->MaxOrderSize)
-			{
-				action = mdp->MaxOrderSize;
+			if (base_stock_level > state.total_inv) {
+				int64_t action = base_stock_level - state.total_inv;
+				//We maximize, so actually this is capped base-stock. 
+				if (action > mdp->MaxOrderSize && capped)
+				{
+					action = mdp->MaxOrderSize;
+				}
+				return action;
 			}
-			return action;
+			else {
+				return 0;
+			}
 		}
-
 	}
 }

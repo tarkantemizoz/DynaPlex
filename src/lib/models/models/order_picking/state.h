@@ -43,7 +43,6 @@ namespace DynaPlex::Models
 					return vars;
 				}
 
-				bool operator==(const Order& other) const = default;
 
 				Order(int64_t location, int64_t state, std::vector<int64_t> time_windows) :
 					location{ location }, state{ state }, time_windows{ time_windows }, assigned{ -1 }, tardy{ false }
@@ -107,7 +106,6 @@ namespace DynaPlex::Models
 
 				bool allocated{ };
 
-				bool operator==(const Picker& other) const = default;
 
 				DynaPlex::VarGroup ToVarGroup() const
 				{
@@ -171,8 +169,6 @@ namespace DynaPlex::Models
 
 			//declaration; for definition see mdp.cpp:
 			DynaPlex::VarGroup ToVarGroup() const;
-
-			bool operator==(const State& other) const = default;
 
 			State(int64_t GridSize, std::vector<Order> orderListP, std::vector<Picker> pickerListP,
 				std::vector<int64_t> decisionsRequiredP, int64_t currentPickerP, std::vector<int64_t> activeLocations,

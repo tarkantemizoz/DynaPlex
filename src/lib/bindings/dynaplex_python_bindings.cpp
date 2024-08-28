@@ -10,7 +10,8 @@ void define_dcl_bindings(pybind11::module_& m);
 void define_gym_emulator_bindings(pybind11::module_& m);
 void define_sample_generator_bindings(pybind11::module_& m);
 void define_demonstrator_bindings(pybind11::module_& m);
-	
+void define_exact_solver_bindings(pybind11::module_& m);
+
 PYBIND11_MODULE(DP_Bindings, m) {
 	m.doc() = "DynaPlex extension for Python";	
 	// Expose the PolicyInterface declared in policy_bindings.h
@@ -21,6 +22,7 @@ PYBIND11_MODULE(DP_Bindings, m) {
 	define_gym_emulator_bindings(m);
 	define_sample_generator_bindings(m);
 	define_demonstrator_bindings(m);
+	define_exact_solver_bindings(m);
 	define_provider_bindings(m);
 
 }

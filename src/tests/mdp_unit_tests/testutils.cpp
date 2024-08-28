@@ -136,7 +136,7 @@ namespace DynaPlex::Tests {
 					{
 						std::vector<std::tuple<double, DynaPlex::dp_State>> transitions{};
 						ASSERT_NO_THROW(
-							auto cost = mdp->AllEventTransitions(trajectory.GetState(), transitions);
+							auto cost = mdp->GetAllEventTransitions(trajectory.GetState(), transitions); 
 						) << info << "did you correctly implement GetEventProbs? If you do not intend to implement this on this MDP, do not enable TestEventProbs";
 						ASSERT_GE(transitions.size(), 1);
 					}

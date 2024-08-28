@@ -27,6 +27,11 @@ namespace DynaPlex {
         return TrainedPolicyProvider::LoadPolicy(mdp, file_path_without_extension);
     }
 
+    DynaPlex::Algorithms::ExactSolver DynaPlexProvider::GetExactSolver(DynaPlex::MDP mdp, const VarGroup& config)
+    {
+        return DynaPlex::Algorithms::ExactSolver{ this->System(),mdp,config };
+    }
+
     DynaPlex::Algorithms::DCL DynaPlexProvider::GetDCL(DynaPlex::MDP mdp, DynaPlex::Policy policy, const VarGroup& config)
     {
         return DynaPlex::Algorithms::DCL{ this->System(),mdp, policy,config };

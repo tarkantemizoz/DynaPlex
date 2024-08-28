@@ -4,7 +4,7 @@ DynaPlex extension for Python
 from __future__ import annotations
 from dp import save_policy
 import typing
-__all__ = ['MDP', 'Policy', 'PolicyComparer', 'dcl', 'demonstrator', 'filepath', 'get_comparer', 'get_dcl', 'get_demonstrator', 'get_gym_emulator', 'get_mdp', 'get_sample_generator', 'gym_emulator', 'io_path', 'list_mdps', 'load_policy', 'sample_generator', 'save_policy']
+__all__ = ['MDP', 'Policy', 'PolicyComparer', 'dcl', 'demonstrator', 'exact_solver', 'filepath', 'get_comparer', 'get_dcl', 'get_demonstrator', 'get_exact_solver', 'get_gym_emulator', 'get_mdp', 'get_sample_generator', 'gym_emulator', 'io_path', 'list_mdps', 'load_policy', 'sample_generator', 'save_policy']
 class MDP:
     def discount_factor(self) -> float:
         ...
@@ -68,6 +68,15 @@ class demonstrator:
         """
         gets a trace for demonstration and rendering purposes.
         """
+class exact_solver:
+    def compute_costs(self, policy: Policy = None) -> float:
+        """
+        Computes exact return (costs/rewards) for the given policy or computes exact optimal costs if no policy is provided.
+        """
+    def get_optimal_policy(self) -> Policy:
+        """
+        Returns the optimal policy. Will reuse the computed policy from `compute_costs` if already available, otherwise initiates the exact solution process.
+        """
 class gym_emulator:
     def action_space_size(self) -> int:
         ...
@@ -104,7 +113,11 @@ def get_dcl(mdp: MDP, policy: Policy = None, **kwargs) -> dcl:
     """
 def get_demonstrator(**kwargs) -> demonstrator:
     """
-    Gets comparer based on keyword arguments; may provide max_period_count and rng_seed. 
+      Gets demonstrator based on keyword arguments; may provide max_period_count and rng_seed. 
+    """
+def get_exact_solver(mdp: MDP, **kwargs) -> exact_solver:
+    """
+    Returns a class that attempts to apply policy iteration to solve the MDP exactly; fails if there are too many states. kw arguments: silent: bool, max_states: int (sets the number of states above which the algorithm fails)
     """
 def get_gym_emulator(mdp: MDP, **kwargs) -> gym_emulator:
     """

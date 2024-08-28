@@ -198,12 +198,12 @@ std::pair<int64_t, int64_t> ReturnBounds(double fractile, std::vector<double> Le
 	return { MaxOrderSize,  MaxSystemInv };
 }
 
-std::vector<std::vector<double>> TestPolicies(std::vector<DynaPlex::Policy> policies, DynaPlex::VarGroup& mdp_config, DynaPlex::VarGroup& instance_config, std::vector<int64_t> periods, bool censoredProblem) {
+std::vector<std::vector<double>> TestPolicies(std::vector<DynaPlex::Policy> policies, DynaPlex::VarGroup& mdp_config, DynaPlex::VarGroup& instance_config, std::vector<int64_t> periods, bool censoredProblem, bool censoredLeadtime = false) {
 	auto& dp = DynaPlexProvider::Get();
 
 	DynaPlex::VarGroup test_config;
 	test_config.Add("number_of_trajectories", 1000);
-	if (censoredProblem) {
+	if (censoredProblem || censoredLeadtime) {
 		test_config.Add("warmup_periods", 0);
 	}
 	else {
@@ -462,7 +462,7 @@ void Case3Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 							auto nn_policy = dp.LoadPolicy(test_mdp, path);
 							policies.push_back(nn_policy);
 
-							InstanceResults.push_back(TestPolicies(policies, mdp_config, instance_config, periods, censored));
+							InstanceResults.push_back(TestPolicies(policies, mdp_config, instance_config, periods, censoredDemand, censoredLeadtime));
 						}
 					}
 					Results.push_back(InstanceResults);

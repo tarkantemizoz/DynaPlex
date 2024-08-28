@@ -6,6 +6,7 @@
 #include "dynaplex/demonstrator.h"
 #include "dynaplex/policycomparer.h"
 #include "dynaplex/dcl.h"
+#include "dynaplex/exactsolver.h"
 namespace DynaPlex {
     class DynaPlexProvider {
         
@@ -35,6 +36,24 @@ namespace DynaPlex {
 
         DynaPlex::Policy LoadPolicy(DynaPlex::MDP mdp, std::string file_path_without_extension);
         
+
+
+        /**
+         * @brief gets an instance of the exact solver
+         * @param mdp model
+         * @param configuration object for the exact solver.
+         * @return the configured exact solver.
+        */
+        DynaPlex::Algorithms::ExactSolver GetExactSolver(DynaPlex::MDP mdp, const VarGroup& config = VarGroup{});
+
+
+        /**
+         * @brief gets an instance of the dcl solver
+         * @param mdp model
+         * @param policy used to kickstart/initiate the solution process. random policy is used of no policy is provided.
+         * @param configuration object for dcl algorithm. May provide H (default 40/256 for finite/infinite horizon MDP), M (default 1000), N (default 5000), L (only for infinite horizon; default 100). May also provide num_gens (default 1), nn_training settings, and nn_architecture settings.
+         * @return the configured dcl instance.
+        */
         DynaPlex::Algorithms::DCL GetDCL(DynaPlex::MDP mdp, DynaPlex::Policy policy = nullptr, const VarGroup& config = VarGroup{});
 
      

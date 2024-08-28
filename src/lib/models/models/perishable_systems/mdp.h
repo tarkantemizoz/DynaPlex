@@ -41,7 +41,6 @@ namespace DynaPlex::Models {
 
 				//declaration; for definition see mdp.cpp:
 				DynaPlex::VarGroup ToVarGroup() const;
-				bool operator==(const State& other) const = default;
 			};
 
 			using Event = int64_t;

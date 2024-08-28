@@ -82,6 +82,8 @@ void TestPaperInstances()
 	test_config.Add("periods_per_trajectory", 5000);
 	test_config.Add("rng_seed", 1122);
 
+	DynaPlex::VarGroup exact_config = DynaPlex::VarGroup{ {"max_states",10000000}, {"silent", true } };
+
 	std::vector<std::vector<double>> ShelfLifeResultsSmall(3);
 	std::vector<std::vector<double>> LeadTimeResultsSmall(3);
 	std::vector<std::vector<double>> CVRResultsSmall(3);
@@ -99,12 +101,6 @@ void TestPaperInstances()
 	std::vector<std::vector<std::vector<double>>> CVRResults(3);
 	std::vector<std::vector<std::vector<double>>> fResults(3);
 	std::vector<std::vector<double>> AllResults;
-
-	std::vector<double> opt_results = { 13.2095,32.5869,50.2482,50.9059,75.3442,87.7991,99.4022,
-		119.174,130.531,23.2582,50.0607,75.8469,65.55,98.2301,120.394,114.329,141.443,164.196,
-		29.0163,91.4943,71.5618,136.255,119.137,178.505,3.68914,16.5407,35.7869,25.8972,48.7094,
-		64.4149,62.747,86.7311,98.8434,9.09165,56.35,38.6633,92.4448,78.486,130.235,0.96312,27.5005,
-		13.5755,50.0702,40.6895,78.2945};
 
 	int64_t opt_results_index = 0;
 	int64_t ShelfLifeIndex = 0;
@@ -135,8 +131,8 @@ void TestPaperInstances()
 
 					DynaPlex::MDP mdp = dp.GetMDP(config);
 					auto policy = mdp->GetPolicy(policy_config);
-					//auto dcl = dp.GetDCL(mdp, policy, dcl_config);
-					//dcl.TrainPolicy();
+					auto dcl = dp.GetDCL(mdp, policy, dcl_config);
+					dcl.TrainPolicy();
 
 					std::string life = "_m" + std::to_string(m);
 					std::string leadtime_str = "_l" + std::to_string(leadtime);
@@ -149,15 +145,14 @@ void TestPaperInstances()
 					}
 					dp.System() << "Network id:  " << loc << std::endl;
 
-					//for (int64_t gen = 1; gen <= num_gens; gen++)
-					//{
-					//	auto policy = dcl.GetPolicy(gen);
-					//	auto path = dp.System().filepath(loc, "dcl_gen" + gen);
-					//	dp.SavePolicy(policy, path);
-					//}
+					for (int64_t gen = 1; gen <= num_gens; gen++)
+					{
+						auto policy = dcl.GetPolicy(gen);
+						auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+						dp.SavePolicy(policy, path);
+					}
 
-					//auto policies = dcl.GetPolicies();
-
+					auto policies = dcl.GetPolicies();
 
 					std::vector<DynaPlex::Policy> policies;
 					policies.push_back(policy);
@@ -168,51 +163,44 @@ void TestPaperInstances()
 						policies.push_back(nn_policy);
 					}
 
-					auto comparer = dp.GetPolicyComparer(mdp, test_config);
-					auto comparison = comparer.Compare(policies);
-
 					std::cout << std::endl;
 					std::cout << config.Dump() << std::endl;
-
+					std::vector<double> results{};
 					double best_nn_cost = std::numeric_limits<double>::infinity();
-					double best_bs_cost{ 0.0 };
-					for (auto& VarGroup : comparison)
-					{
-						std::cout << VarGroup.Dump() << std::endl;
-						DynaPlex::VarGroup policy_id;
-						VarGroup.Get("policy", policy_id);
-						std::string id;
-						policy_id.Get("id", id);
+					if (!((m + leadtime <= 5 && (f == 0.0 || f == 1.0)) || (m + leadtime <= 4 && f == 0.5))) {
+						auto comparer = dp.GetPolicyComparer(mdp, test_config);
+						auto comparison = comparer.Compare(policies);
 
-						if (id == "NN_Policy") {
-							double nn_cost;
-							VarGroup.Get("mean", nn_cost);
-							if (nn_cost < best_nn_cost) {
-								best_nn_cost = nn_cost;
+						double best_bs_cost{ 0.0 };
+						for (auto& VarGroup : comparison)
+						{
+							std::cout << VarGroup.Dump() << std::endl;
+							DynaPlex::VarGroup policy_id;
+							VarGroup.Get("policy", policy_id);
+							std::string id;
+							policy_id.Get("id", id);
+
+							if (id == "NN_Policy") {
+								double nn_cost;
+								VarGroup.Get("mean", nn_cost);
+								if (nn_cost < best_nn_cost) {
+									best_nn_cost = nn_cost;
+								}
+							}
+							else if (id == "base_stock") {
+								VarGroup.Get("mean", best_bs_cost);
 							}
 						}
-						else if (id == "base_stock") {
-							VarGroup.Get("mean", best_bs_cost);
-						}
-					}
 
-					double BSNNGap = (100 * (best_nn_cost - best_bs_cost) / best_bs_cost);
-					std::cout << std::endl;
-					std::cout << "Best base-stock policy cost:  " << best_bs_cost << "  best nn-policy cost:  " << best_nn_cost << "  gap:  " << BSNNGap << std::endl;
-					std::cout << std::endl;
+						double BSNNGap = (100 * (best_nn_cost - best_bs_cost) / best_bs_cost);
+						std::cout << std::endl;
+						std::cout << "Best base-stock policy cost:  " << best_bs_cost << "  best nn-policy cost:  " << best_nn_cost << "  gap:  " << BSNNGap << std::endl;
+						std::cout << std::endl;
 
-					std::vector<double> results{};
-					results.push_back(best_bs_cost);
-					results.push_back(best_nn_cost);
-					results.push_back(BSNNGap);
+						results.push_back(best_bs_cost);
+						results.push_back(best_nn_cost);
+						results.push_back(BSNNGap);
 
-					ShelfLifeResults[ShelfLifeIndex].push_back(results);
-					LeadTimeResults[LeadTimeIndex].push_back(results);
-					CVRResults[CVRindex].push_back(results);
-					fResults[findex].push_back(results);
-					AllResults.push_back(results);
-
-					if (!((m + leadtime <= 5 && (f == 0.0 || f == 1.0)) || (m + leadtime <= 4 && f == 0.5))) {
 						ShelfLifeResultsLarge[ShelfLifeIndex].push_back(results);
 						LeadTimeResultsLarge[LeadTimeIndex].push_back(results);
 						CVRResultsLarge[CVRindex].push_back(results);
@@ -220,18 +208,39 @@ void TestPaperInstances()
 						AllResultsLarge.push_back(results);
 					}
 					else {
-						double gap = (100 * (best_nn_cost - opt_results[opt_results_index]) / opt_results[opt_results_index]);
-						double opt_gap = std::max(0.0, gap);
+						auto exactsolver = dp.GetExactSolver(mdp, exact_config);
+						double optimal_cost = exactsolver.ComputeCosts();
+						double bs_pol_cost = exactsolver.ComputeCosts(policy);
+
+						for (int64_t i = 1; i < policies.size(); i++) {
+							auto nn_policy = policies[i];
+							double nn_pol_cost = exactsolver.ComputeCosts(nn_policy);
+							if (nn_pol_cost < best_nn_cost)
+								best_nn_cost == nn_pol_cost;
+						}
+						double nn_opt_gap = 100 * (best_nn_cost - optimal_cost) / optimal_cost;
+						double nn_bs_gap = 100 * (best_nn_cost - bs_pol_cost) / bs_pol_cost;
+
 						std::cout << std::endl;
-						std::cout << "Opt gap:  " << opt_gap << std::endl;
+						std::cout << "Best base-stock policy cost:  " << bs_pol_cost << "  best nn-policy cost:  " << best_nn_cost << "  DCL BS gap:  " << nn_bs_gap << "  DCL opt gap:   " << nn_opt_gap << std::endl;
 						std::cout << std::endl;
-						ShelfLifeResultsSmall[ShelfLifeIndex].push_back(opt_gap);
-						LeadTimeResultsSmall[LeadTimeIndex].push_back(opt_gap);
-						CVRResultsSmall[CVRindex].push_back(opt_gap);
-						fResultsSmall[findex].push_back(opt_gap);
-						AllResultsSmall.push_back(opt_gap);
+
+						ShelfLifeResultsSmall[ShelfLifeIndex].push_back(nn_opt_gap);
+						LeadTimeResultsSmall[LeadTimeIndex].push_back(nn_opt_gap);
+						CVRResultsSmall[CVRindex].push_back(nn_opt_gap);
+						fResultsSmall[findex].push_back(nn_opt_gap);
+						AllResultsSmall.push_back(nn_opt_gap);
 						opt_results_index++;
+
+						results.push_back(bs_pol_cost);
+						results.push_back(best_nn_cost);
+						results.push_back(nn_bs_gap);
 					}
+					ShelfLifeResults[ShelfLifeIndex].push_back(results);
+					LeadTimeResults[LeadTimeIndex].push_back(results);
+					CVRResults[CVRindex].push_back(results);
+					fResults[findex].push_back(results);
+					AllResults.push_back(results);
 
 					findex++;
 				}

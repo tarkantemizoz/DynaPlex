@@ -9,6 +9,7 @@
 
 #include "erasure_concepts.h"
 #include "randompolicy.h"
+#include "greedypolicy.h"
 #include "policyregistry.h"
 #include "stateadapter.h"
 #include <cassert>
@@ -51,9 +52,9 @@ namespace DynaPlex::Erasure
 			return HasEventProbabilities<t_MDP, t_Event> || HasStateDependendentEventProbabilities<t_MDP, t_State, t_Event>;
 		}
 
-		double AllEventTransitions(const DynaPlex::dp_State& dp_state, std::vector<std::tuple<double, DynaPlex::dp_State>>& transitions) const override {
+		double GetAllEventTransitions(const DynaPlex::dp_State& dp_state, std::vector<std::tuple<double, DynaPlex::dp_State>>& transitions) const override {
 			if (HasHiddenStateVariables())
-				throw DynaPlex::Error("MDP::AllEventTransitions : Cannot return event transitions as state has hidden variables.");
+				throw DynaPlex::Error("MDP::GetAllEventTransitions : Cannot return event transitions as state has hidden variables.");
 			try {
 				std::vector<std::tuple<t_Event, double>>  eventProbs;
 		
@@ -61,7 +62,7 @@ namespace DynaPlex::Erasure
 				auto& t_state = ToState(dp_state);
 				const StateCategory cat = mdp->GetStateCategory(t_state);
 				if (!cat.IsAwaitEvent())
-					throw DynaPlex::Error("MDP::AllTransitions - called with state argument that does not await event.");
+					throw DynaPlex::Error("MDP::GetAllEventTransitions - called with state argument that does not await event.");
 
 				if constexpr (HasEventProbabilities<t_MDP, t_Event>)
 				{
@@ -96,7 +97,7 @@ namespace DynaPlex::Erasure
 				return expected_cost;				
 			}
 			catch (const DynaPlex::Error& e) {
-				throw DynaPlex::Error(std::string("Error in MDPAdapter::GetAllTransitions: ") + e.what());
+				throw DynaPlex::Error(std::string("Error in MDPAdapter::GetAllEventTransitions: ") + e.what());
 			}
 		}
 
@@ -160,8 +161,15 @@ namespace DynaPlex::Erasure
 		{
 			try {
 				// Register built-in policies
-				policy_registry.template Register<RandomPolicy<t_MDP>>("random", "makes a random choice between the allowed actions");
-
+				//random policy:
+				policy_registry.template Register<RandomPolicy<t_MDP>>("random", "Makes a random choice between the allowed actions");
+				//greedy policy:
+				constexpr double min = -1.0;
+				constexpr double max = 1.0;
+				if (Objective() < 0.0)
+					policy_registry.template Register<GreedyPolicy<t_MDP, min>>("greedy", "Chooses the action with the lowest immediate return. Breaks ties by choosing the action with the lowest numeric value.");
+				else
+					policy_registry.template Register<GreedyPolicy<t_MDP, max>>("greedy", "Chooses the action with the highest immediate return. Breaks ties by choosing the action with the lowest numeric value.");
 				// Register client-provided policies. 
 				if constexpr (HasRegisterPolicies<t_MDP, PolicyRegistry<t_MDP>>) {
 					mdp->RegisterPolicies(policy_registry);

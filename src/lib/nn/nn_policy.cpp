@@ -25,7 +25,8 @@ namespace DynaPlex {
 		// Convert trajectories into a tensor for the neural network.
 		torch::Tensor batched_inputs = torch::empty({ static_cast<int64_t>(trajectories.size()), input_dim }, torch::kFloat32);
 		float* input_data_ptr = batched_inputs.data_ptr<float>();
-
+		//note that this allready checks that all trajectories are await_action - separate check would
+		//be superfluous. 
 		mdp->GetFlatFeatures(trajectories, std::span<float>(input_data_ptr, trajectories.size() * input_dim));
 
 

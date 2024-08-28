@@ -40,7 +40,7 @@ namespace DynaPlex::Models {
 		MDP::MDP(const VarGroup& config)
 		{
 			config.Get("p", p);
-			config.Get("h", h);
+			config.GetOrDefault("h", h, 1.0);
 			config.Get("leadtime", leadtime);
 			config.Get("demand_dist",demand_dist);
 			demand_dist.OptimizeForSampling();
@@ -57,9 +57,13 @@ namespace DynaPlex::Models {
 			{
 				DemOverLeadtime = DemOverLeadtime.Add(demand_dist);
 			}
+			bool bound_order_size_to_max_system_inv;
+			config.GetOrDefault("bound_order_size_to_max_system_inv", bound_order_size_to_max_system_inv, false);
+
 			MaxOrderSize = demand_dist.Fractile(p / (p + h));
 			MaxSystemInv = DemOverLeadtime.Fractile(p / (p + h));
-
+			if (bound_order_size_to_max_system_inv)
+				MaxOrderSize = MaxSystemInv;
 
 		}
 

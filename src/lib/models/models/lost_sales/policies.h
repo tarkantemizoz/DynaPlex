@@ -16,6 +16,7 @@ namespace DynaPlex::Models {
 			std::shared_ptr<const MDP> mdp;
 			const VarGroup varGroup;
 			int64_t base_stock_level;
+			bool capped;
 		public:
 			BaseStockPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config);
 			int64_t GetAction(const MDP::State& state) const;

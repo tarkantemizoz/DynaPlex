@@ -62,9 +62,6 @@ namespace DynaPlex::Tests {
 		//	std::cout << sample.ToVarGroup().Dump() << std::endl;
 			auto& other = data_from_json.Samples[i];
 			ASSERT_EQ(sample.action_label, other.action_label);
-			ASSERT_TRUE(
-				mdp->StatesAreEqual(sample.state, other.state)
-			);
 
 		}
 
