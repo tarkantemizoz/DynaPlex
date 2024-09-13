@@ -6,19 +6,25 @@ namespace DynaPlex::Algorithms {
 	class ExactSolver::Impl {
 	public:
 
-		static constexpr size_t float_size = sizeof(float);
 		System system;
 		DynaPlex::MDP mdp;
 		bool silent;
 		bool exact_policy_computed{ false };
 		bool exact_policy_exported{ false };
+		bool statemap_created{ false };
+		int64_t num_sample_states;
+		double epsilon;
+		int64_t maxIter;
 		//for numerical stability of hybrid iteration algorithm when discountfactor = 1, 
 		//we need to add self-transitions to avoid periodicity. 
 		static constexpr double self_transition_prob = 0.02;
 		Impl(const System& sys, DynaPlex::MDP mdp, const DynaPlex::VarGroup& conf)
 			: system(sys), mdp(mdp), hasher{}, statemap{}, action_states{} {
 
+			conf.GetOrDefault("epsilon", epsilon, 0.0001);
+			conf.GetOrDefault("maxIter", maxIter, 100);
 			conf.GetOrDefault("silent", silent, false);
+			conf.GetOrDefault("num_sample_states", num_sample_states, 10);
 
 			if (!mdp->ProvidesEventProbs()) {
 				throw DynaPlex::Error("ExactSolver: MDP does not provide event probabilities. Note that exact algorithms need event probabilities.");
@@ -44,13 +50,11 @@ namespace DynaPlex::Algorithms {
 			}
 
 			conf.GetOrDefault("max_states", max_states, 1048576);
-			feats_holder.resize(mdp->NumFlatFeatures(), 0.0f);
-			feats_holder2.resize(mdp->NumFlatFeatures(), 0.0f);
 
 		}
 		std::hash<float> hasher;
 		//helper object that will be reused, to avoid very frequent memory allocations;
-		std::vector<float> feats_holder, feats_holder2;
+		static thread_local std::vector<float> feats_holder, feats_holder2;
 		//helper object that will be reused, to avoid very frequent memory allocations;
 		std::vector<std::tuple<double, DynaPlex::dp_State>> transitions_holder;
 		//helper object that will be reused, to avoid very frequent memory allocations;
@@ -68,17 +72,6 @@ namespace DynaPlex::Algorithms {
 			mdp->GetFlatFeatures(state2, feats_holder2);
 			//states are considered equal if their features are equal. 
 			return feats_holder == feats_holder2;
-		}
-
-		size_t GetHashThreadSafe(const DynaPlex::dp_State& state) {
-			std::vector<float> feats_holder_ts;
-			feats_holder_ts.resize(mdp->NumFlatFeatures(), 0.0f);
-			mdp->GetFlatFeatures(state, feats_holder_ts);
-			size_t hash_key = 0;
-			for (const float& f : feats_holder_ts) {
-				hash_key ^= hasher(f) + 0x9e3779b9 + (hash_key << 6) + (hash_key >> 2);
-			}
-			return hash_key;
 		}
 
 		size_t GetHash(const DynaPlex::dp_State& state) {
@@ -122,8 +115,10 @@ namespace DynaPlex::Algorithms {
 		std::vector<StateStorage> action_states;
 		//to keep count of any hash collisions 
 		size_t hash_collisions;
+		size_t LastReportedTotalStates;
 
-		LookupValue& GetStateWithHash(const DynaPlex::dp_State& state, size_t hash) {
+		LookupValue& GetStateValue(const DynaPlex::dp_State& state) {
+			auto hash = GetHash(state);
 			auto iter = statemap.find(hash);
 			if (iter == statemap.end()) {
 				auto cat = mdp->GetStateCategory(state);
@@ -147,15 +142,6 @@ namespace DynaPlex::Algorithms {
 			throw DynaPlex::Error("State expected to be found but was not. ");
 		}
 
-		LookupValue& GetStateValue(const DynaPlex::dp_State& state) {
-			auto hash = GetHash(state);
-			return GetStateWithHash(state, hash);
-		}
-		LookupValue& GetStateValueTS(const DynaPlex::dp_State& state) {
-			auto hash = GetHashThreadSafe(state);
-			return GetStateWithHash(state, hash);
-		}
-
 		//Checks if state is allready added to list, and adds to list if not present. 
 		void AddState(DynaPlex::dp_State& state) {
 			auto hash = GetHash(state);
@@ -175,9 +161,21 @@ namespace DynaPlex::Algorithms {
 				if (action_states.size() >= max_states)
 				{
 					std::string message = "ExactSolver: Number of action states in mdp exceeds option max_states (=";
-					message += std::to_string(max_states); message += "). It may not be feasible to solve this MDP exactly. Consider adapting the max_states option.";
+					message += std::to_string(max_states); message += "). It may not be feasible to solve this MDP exactly. Consider adapting the max_states option.\n Some sample states:\n";
+					for (int64_t i = 0; i < num_sample_states; i++)
+					{
+						message += action_states.at(i * action_states.size() / num_sample_states).state->ToVarGroup().Dump() + "\n";
+					}
 					throw DynaPlex::Error(message);
 				}
+				if (action_states.size() > LastReportedTotalStates)
+				{
+					if (!silent)
+						system << LastReportedTotalStates << "  " << std::flush;
+					LastReportedTotalStates *= 2;
+
+				}
+
 				statemap[hash].emplace_front(action_states.size());
 				action_states.push_back(std::move(state));
 			}
@@ -241,6 +239,8 @@ namespace DynaPlex::Algorithms {
 				mdp->InitiateState({ &traj,1 }, storage.state);
 				pol->SetAction({ &traj,1 });
 				storage.current_action = traj.NextAction;
+				if (!mdp->IsAllowedAction(traj.GetState(), traj.NextAction))
+					throw DynaPlex::Error("Illegal action proposed by policy.");
 			}
 		}
 		//This populates/determines the transitions and costs for the actions currently set 
@@ -293,6 +293,9 @@ namespace DynaPlex::Algorithms {
 		///This populates the key data structures action_states and statemap
 		void CreateStateMap()
 		{
+			if (!silent)
+				system << "adding states to state map:" << std::endl;
+			LastReportedTotalStates = 1;
 			hash_collisions = 0;
 			auto state = mdp->GetInitialState();
 			ProcessState(state);
@@ -303,6 +306,7 @@ namespace DynaPlex::Algorithms {
 				expanded_action_states++;
 			}
 			if (!silent) {
+				system << std::endl;
 				system << "Created complete state list consisting of " << action_states.size() << " states." << std::endl;
 				if (hash_collisions > 0)
 					system << "There are " << hash_collisions << " collided hashes. " << std::endl;
@@ -313,6 +317,7 @@ namespace DynaPlex::Algorithms {
 		}
 		double maxChange;
 		double currentCost;
+		int64_t iter = 0;
 
 		void IterateValues() {
 
@@ -376,6 +381,7 @@ namespace DynaPlex::Algorithms {
 			{
 				maxChange = (deltaMax - deltaMin) / 2.0 / (1.0 - self_transition_prob);
 				currentCost = (deltaMax + deltaMin) / 2.0 / (1.0 - self_transition_prob);
+				iter++;
 			}
 			else
 			{
@@ -452,6 +458,9 @@ namespace DynaPlex::Algorithms {
 		}
 
 		double ComputeCosts(DynaPlex::Policy policy) {
+			feats_holder.resize(mdp->NumFlatFeatures(), 0.0f);
+			feats_holder2.resize(mdp->NumFlatFeatures(), 0.0f);
+
 			//If this flag is set, it means that the memory of statemap is being used as part of an 
 			//optimal policy. Using this same memory now for setting the optimal costs will lead to 
 			//strange errors, hence better throw an error now. 
@@ -460,6 +469,20 @@ namespace DynaPlex::Algorithms {
 			statemap.reserve(max_states);
 			action_states.reserve(max_states);
 			CreateStateMap();
+			if (!statemap_created)
+			{
+				statemap.reserve(max_states);
+				action_states.reserve(max_states);
+				CreateStateMap();
+				statemap_created = true;
+			}
+			else
+			{
+				if (!silent)
+					system << "ExactSolver : Computing costs - reusing statemap" << std::endl;
+			}
+
+
 			SetActions(policy);
 			DetermineTransitions();
 			do {
@@ -472,7 +495,7 @@ namespace DynaPlex::Algorithms {
 				}
 				IterateValues();
 				CheckConvergence();
-			} while (maxChange > 0.0001);
+			} while (maxChange > epsilon && iter < maxIter);
 			if (!policy)
 				exact_policy_computed = true;
 			else
@@ -527,10 +550,10 @@ namespace DynaPlex::Algorithms {
 			for (auto& traj : trajectories) {
 				const DynaPlex::StateCategory& cat = traj.Category;
 
-
+				impl->feats_holder.resize(impl->mdp->NumFlatFeatures(), 0.0f);
 				if (cat.IsAwaitAction())
 				{
-					auto& value = impl->GetStateValueTS(traj.GetState());
+					auto& value = impl->GetStateValue(traj.GetState());
 					traj.NextAction = impl->action_states[value.state_index].current_action;
 					auto& retrieved = impl->action_states[value.state_index].state;
 
@@ -568,4 +591,7 @@ namespace DynaPlex::Algorithms {
 		pImpl->exact_policy_exported = true;
 		return std::make_shared<ExactPolicy>(pImpl);
 	}
+	// Allocate storage for static thread_local members
+	thread_local std::vector<float> ExactSolver::Impl::feats_holder;
+	thread_local std::vector<float> ExactSolver::Impl::feats_holder2;
 }

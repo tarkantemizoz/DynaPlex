@@ -23,6 +23,7 @@ int64_t FindBestBSLevel(DynaPlex::VarGroup& config)
 	DynaPlex::VarGroup policy_config;
 	policy_config.Add("id", "base_stock");
 	policy_config.Add("base_stock_level", BSLevel);
+	policy_config.Add("capped", false);
 
 	while (true)
 	{
@@ -107,15 +108,7 @@ void TestPaperInstances(int64_t rng_seed) {
 					}));
 
 				DynaPlex::MDP mdp = dp.GetMDP(config);
-
 				auto policy = mdp->GetPolicy("base_stock");
-
-				int64_t BestBSLevel = FindBestBSLevel(config);
-				DynaPlex::VarGroup policy_config;
-				policy_config.Add("id", "base_stock");
-				policy_config.Add("base_stock_level", BestBSLevel);
-				policy_config.Add("capped", false);
-				auto best_bs_policy = mdp->GetPolicy(policy_config);
 
 				//only print on this node in case of multi-node program. 
 				dp.System() << config.Dump() << std::endl;
@@ -124,7 +117,7 @@ void TestPaperInstances(int64_t rng_seed) {
 				auto dcl = dp.GetDCL(mdp, policy, dcl_config);
 				dcl.TrainPolicy();
 
-				std::string penalty_str = "_p" + std::to_string(static_cast<int64_t>(std::floor(p)));
+				std::string penalty_str = "_p" + std::to_string(static_cast<int64_t>(p));
 				std::string leadtime_str = "_l" + std::to_string(leadtime);
 				std::string numsamples_str = "_N" + std::to_string(N);
 				std::string loc = id + type + penalty_str + leadtime_str + numsamples_str;
@@ -147,7 +140,7 @@ void TestPaperInstances(int64_t rng_seed) {
 	double dcl_opt_gaps = 0.0;
 	double dcl_bs_gaps_all = 0.0;
 	double dcl_bs_gaps_large = 0.0;
-	
+
 	for (const std::string& type : demand_dist_types) {
 		for (double p : p_values) {
 			for (int64_t leadtime : leadtime_values) {
@@ -157,19 +150,13 @@ void TestPaperInstances(int64_t rng_seed) {
 					{"type", type},
 					{"mean", 5.0}
 					}));
+				config.Set("bound_order_size_to_max_system_inv", false);
 
 				DynaPlex::MDP mdp = dp.GetMDP(config);
 
-				int64_t BestBSLevel = FindBestBSLevel(config);
-				DynaPlex::VarGroup policy_config;
-				policy_config.Add("id", "base_stock");
-				policy_config.Add("base_stock_level", BestBSLevel);
-				policy_config.Add("capped", false);
-				auto best_bs_policy = mdp->GetPolicy(policy_config);
-
 				//only print on this node in case of multi-node program. 
 				dp.System() << config.Dump() << std::endl;
-				std::string penalty_str = "_p" + std::to_string(static_cast<int64_t>(std::floor(p)));
+				std::string penalty_str = "_p" + std::to_string(static_cast<int64_t>(p));
 				std::string leadtime_str = "_l" + std::to_string(leadtime);
 				std::string numsamples_str = "_N" + std::to_string(N);
 				std::string loc = id + type + penalty_str + leadtime_str + numsamples_str;
@@ -188,17 +175,28 @@ void TestPaperInstances(int64_t rng_seed) {
 
 				double best_nn_cost = std::numeric_limits<double>::infinity();
 				if (leadtime <= 4) {
-					auto exactsolver = dp.GetExactSolver(mdp, exact_config);
+					auto exactsolver_nn = dp.GetExactSolver(mdp, exact_config);
+					for (int64_t i = 0; i < policies.size(); i++) {
+						auto nn_policy = policies[i];
+						double nn_pol_cost = exactsolver_nn.ComputeCosts(nn_policy);
+						if (nn_pol_cost < best_nn_cost)
+							best_nn_cost = nn_pol_cost;
+					}
+
+					config.Set("bound_order_size_to_max_system_inv", true);
+					int64_t BestBSLevel = FindBestBSLevel(config);
+					DynaPlex::VarGroup policy_config;
+					policy_config.Add("id", "base_stock");
+					policy_config.Add("base_stock_level", BestBSLevel);
+					policy_config.Add("capped", false);
+					DynaPlex::MDP mdp_test = dp.GetMDP(config);
+					auto best_bs_policy = mdp_test->GetPolicy(policy_config);
+
+					auto exactsolver = dp.GetExactSolver(mdp_test, exact_config);
 					double optimal_cost = exactsolver.ComputeCosts();
 					double bs_pol_cost = exactsolver.ComputeCosts(best_bs_policy);
 					double bs_opt_gap = 100 * (bs_pol_cost - optimal_cost) / optimal_cost;
 
-					for (int64_t i = 0; i < policies.size(); i++) {
-						auto nn_policy = policies[i];
-						double nn_pol_cost = exactsolver.ComputeCosts(nn_policy);
-						if (nn_pol_cost < best_nn_cost)
-							best_nn_cost == nn_pol_cost;
-					}
 					double nn_opt_gap = 100 * (best_nn_cost - optimal_cost) / optimal_cost;
 					dcl_opt_gaps += nn_opt_gap;
 					double nn_bs_gap = 100 * (best_nn_cost - bs_pol_cost) / bs_pol_cost;
@@ -208,31 +206,34 @@ void TestPaperInstances(int64_t rng_seed) {
 					dp.System() << std::endl;
 				}
 				else {
-					auto comparer = dp.GetPolicyComparer(mdp, test_config);
-					policies.push_back(best_bs_policy);
-					auto comparison = comparer.Compare(policies);
+					auto comparer_nn = dp.GetPolicyComparer(mdp, test_config);
+					auto comparison_nn = comparer_nn.Compare(policies);
 
 					double best_nn_cost = std::numeric_limits<double>::infinity();
-					double best_bs_cost{ 0.0 };
-					for (auto& VarGroup : comparison)
+					for (auto& VarGroup : comparison_nn)
 					{
-						std::cout << VarGroup.Dump() << std::endl;
-						DynaPlex::VarGroup policy_id;
-						VarGroup.Get("policy", policy_id);
-						std::string id;
-						policy_id.Get("id", id);
-
-						if (id == "NN_Policy") {
-							double nn_cost;
-							VarGroup.Get("mean", nn_cost);
-							if (nn_cost < best_nn_cost) {
-								best_nn_cost = nn_cost;
-							}
-						}
-						else if (id == "base_stock") {
-							VarGroup.Get("mean", best_bs_cost);
+						double nn_cost;
+						VarGroup.Get("mean", nn_cost);
+						if (nn_cost < best_nn_cost) {
+							best_nn_cost = nn_cost;
 						}
 					}
+
+					config.Set("bound_order_size_to_max_system_inv", true);
+					int64_t BestBSLevel = FindBestBSLevel(config);
+					DynaPlex::VarGroup policy_config;
+					policy_config.Add("id", "base_stock");
+					policy_config.Add("base_stock_level", BestBSLevel);
+					policy_config.Add("capped", false);
+					DynaPlex::MDP mdp_test = dp.GetMDP(config);
+					auto best_bs_policy = mdp_test->GetPolicy(policy_config);
+
+					double best_bs_cost{ 0.0 };
+					auto comparer = dp.GetPolicyComparer(mdp_test, test_config);
+					policies.push_back(best_bs_policy);
+					auto comparison = comparer.Assess(best_bs_policy);
+					comparison.Get("mean", best_bs_cost);
+
 					double nn_bs_gap = 100 * (best_nn_cost - best_bs_cost) / best_bs_cost;
 					dcl_bs_gaps_all += nn_bs_gap;
 					dcl_bs_gaps_large += nn_bs_gap;

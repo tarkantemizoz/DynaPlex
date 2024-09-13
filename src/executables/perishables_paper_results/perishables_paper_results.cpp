@@ -63,7 +63,7 @@ void TestPaperInstances()
 	};
 
 	int64_t num_gens = 3;
-	bool enable_seq_halving = true;
+	bool enable_seq_halving = true; // set false for DCL_0 results
 	DynaPlex::VarGroup dcl_config{
 		//use paper hyperparameters everywhere. 
 		{"N",5000},
@@ -136,7 +136,7 @@ void TestPaperInstances()
 
 					std::string life = "_m" + std::to_string(m);
 					std::string leadtime_str = "_l" + std::to_string(leadtime);
-					std::string cvr_str = "_l" + std::to_string(cvr);
+					std::string cvr_str = "_cvr" + std::to_string(cvr);
 					std::string f_str = "_f" + std::to_string(f);
 
 					std::string loc = id + life + leadtime_str + cvr_str + f_str;
@@ -153,15 +153,6 @@ void TestPaperInstances()
 					}
 
 					auto policies = dcl.GetPolicies();
-
-					std::vector<DynaPlex::Policy> policies;
-					policies.push_back(policy);
-					for (int64_t gen = 1; gen <= num_gens; gen++)
-					{
-						auto path = dp.System().filepath(loc, "dcl_gen" + gen);
-						auto nn_policy = dp.LoadPolicy(mdp, path);
-						policies.push_back(nn_policy);
-					}
 
 					std::cout << std::endl;
 					std::cout << config.Dump() << std::endl;
@@ -216,7 +207,7 @@ void TestPaperInstances()
 							auto nn_policy = policies[i];
 							double nn_pol_cost = exactsolver.ComputeCosts(nn_policy);
 							if (nn_pol_cost < best_nn_cost)
-								best_nn_cost == nn_pol_cost;
+								best_nn_cost = nn_pol_cost;
 						}
 						double nn_opt_gap = 100 * (best_nn_cost - optimal_cost) / optimal_cost;
 						double nn_bs_gap = 100 * (best_nn_cost - bs_pol_cost) / bs_pol_cost;
@@ -572,5 +563,4 @@ int main() {
 	TestPaperInstances();
 
 	return 0;
-
 }

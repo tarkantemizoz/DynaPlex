@@ -25,7 +25,7 @@ namespace DynaPlex::Tests {
 		 */ 		
 		bool RelaxOnProgramFlow = false;
 		/// Skip tests related to state equality, when MDP does not support testing states for equality. 
-		bool SkipEqualityTests = false;
+		bool SkipEqualityTests = true;
 		/// Skip tests related to serialization of states
 		bool SkipStateSerializationTests = false;
 

@@ -29,7 +29,6 @@ int64_t FindBestBSLevel(DynaPlex::VarGroup& config)
 		auto comparison = comparer.Assess(policy);
 		double cost;
 		comparison.Get("mean", cost);
-		//std::cout << BSLevel << "  " << cost << std::endl;
 		if (cost < bestBScost)
 		{
 			bestBScost = cost;
@@ -41,7 +40,7 @@ int64_t FindBestBSLevel(DynaPlex::VarGroup& config)
 			break;
 		}
 	}
-
+	
 	return bestBSLevel;
 }
 
@@ -61,15 +60,17 @@ void TestPaperInstances() {
 		{"hidden_layers",DynaPlex::VarGroup::Int64Vec{256,128,128,128}}
 	};
 
+	int64_t num_gens = 3;
+	bool enable_seq_halving = true;
 	DynaPlex::VarGroup dcl_config{
 		//use paper hyperparameters everywhere. 
 		{"N",5000},
-		{"num_gens",3},
+		{"num_gens",num_gens},
 		{"M",1000},
 		{"H", 40},
 		{"L", 100},
 		{"nn_architecture",nn_architecture},
-		{"enable_sequential_halving", true},
+		{"enable_sequential_halving", enable_seq_halving},
 		{"nn_training",nn_training}
 	};
 
@@ -80,7 +81,8 @@ void TestPaperInstances() {
 	test_config.Add("rng_seed", 18071994);
 
 	DynaPlex::VarGroup mdp_config;
-	mdp_config.Add("id", "random_leadtimes");
+	std::string id = "random_leadtimes";
+	mdp_config.Add("id", id);
 	mdp_config.Add("InitialInventoryLevel", 0);
 	mdp_config.Add("InitialOrdersInPipeline", 0);
 
@@ -100,7 +102,6 @@ void TestPaperInstances() {
 		int64_t BestBSLevel = FindBestBSLevel(mdp_config);
 		mdp_config.Set("optimized", true);
 		mdp_config.Set("BaseStockLevel", BestBSLevel);
-		//mdp_config.Set("InitialInventoryLevel", BestBSLevel);
 		DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
 		DynaPlex::VarGroup policy_config;
@@ -116,7 +117,23 @@ void TestPaperInstances() {
 		{
 			dp.System() << mdp_config.Dump() << std::endl;
 			dcl.TrainPolicy();
-			dp.System() << std::endl;
+
+			std::string leadtime_str = "_l_exponential";
+			std::string demandRate_str = "_d" + std::to_string(static_cast<int64_t>(DemandRate));
+			std::string holdingCost_str = "_h" + std::to_string(static_cast<int64_t>(1));
+			std::string backorderCost_str = "_b" + std::to_string(static_cast<int64_t>(1));
+			std::string loc = id + leadtime_str + demandRate_str + holdingCost_str + backorderCost_str;
+			if (!enable_seq_halving) {
+				loc = loc + "_DCL0";
+			}
+			dp.System() << "Network id:  " << loc << std::endl;
+
+			for (int64_t gen = 1; gen <= num_gens; gen++)
+			{
+				auto policy = dcl.GetPolicy(gen);
+				auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+				dp.SavePolicy(policy, path);
+			}
 		}
 
 		if (evaluate)
@@ -169,7 +186,6 @@ void TestPaperInstances() {
 				int64_t BestBSLevel = FindBestBSLevel(mdp_config);
 				mdp_config.Set("optimized", true);
 				mdp_config.Set("BaseStockLevel", BestBSLevel);
-				//mdp_config.Set("InitialInventoryLevel", BestBSLevel);
 				DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
 				DynaPlex::VarGroup policy_config;
@@ -185,7 +201,23 @@ void TestPaperInstances() {
 				{
 					dp.System() << mdp_config.Dump() << std::endl;
 					dcl.TrainPolicy();
-					dp.System() << std::endl;
+
+					std::string leadtime_str = "_l_exponential";
+					std::string demandRate_str = "_d" + std::to_string(static_cast<int64_t>(10));
+					std::string holdingCost_str = "_h" + std::to_string(static_cast<int64_t>(h));
+					std::string backorderCost_str = "_b" + std::to_string(static_cast<int64_t>(b));
+					std::string loc = id + leadtime_str + demandRate_str + holdingCost_str + backorderCost_str;
+					if (!enable_seq_halving) {
+						loc = loc + "_DCL0";
+					}
+					dp.System() << "Network id:  " << loc << std::endl;
+
+					for (int64_t gen = 1; gen <= num_gens; gen++)
+					{
+						auto policy = dcl.GetPolicy(gen);
+						auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+						dp.SavePolicy(policy, path);
+					}
 				}
 
 				if (evaluate)
@@ -208,7 +240,6 @@ void TestPaperInstances() {
 	}
 
 	// Uniform - pareto distribution results
-
 	mdp_config.Set("h", 1.0);
 	for (std::string dist : { "uniform", "pareto" })
 	{
@@ -235,7 +266,6 @@ void TestPaperInstances() {
 					int64_t BestBSLevel = FindBestBSLevel(mdp_config);
 					mdp_config.Set("optimized", true);
 					mdp_config.Set("BaseStockLevel", BestBSLevel);
-					//mdp_config.Set("InitialInventoryLevel", BestBSLevel);
 					DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
 					DynaPlex::VarGroup policy_config;
@@ -251,7 +281,23 @@ void TestPaperInstances() {
 					{
 						dp.System() << mdp_config.Dump() << std::endl;
 						dcl.TrainPolicy();
-						dp.System() << std::endl;
+
+						std::string leadtime_str = "_l" + dist;
+						std::string demandRate_str = "_d" + std::to_string(static_cast<int64_t>(DemandRate));
+						std::string holdingCost_str = "_h" + std::to_string(static_cast<int64_t>(1));
+						std::string backorderCost_str = "_b" + std::to_string(static_cast<int64_t>(b));
+						std::string loc = id + leadtime_str + demandRate_str + holdingCost_str + backorderCost_str;
+						if (!enable_seq_halving) {
+							loc = loc + "_DCL0";
+						}
+						dp.System() << "Network id:  " << loc << std::endl;
+
+						for (int64_t gen = 1; gen <= num_gens; gen++)
+						{
+							auto policy = dcl.GetPolicy(gen);
+							auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+							dp.SavePolicy(policy, path);
+						}
 					}
 
 					if (evaluate)

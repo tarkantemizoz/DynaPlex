@@ -141,10 +141,14 @@ namespace DynaPlex::Models {
 				if (event.second[i] <= prob)
 				{
 					double orderArrivalTime = 0.0;
-					orderArrivalTime = event.second[i] * event.first / prob;
-					ReceivedOrderTimesInThisPeriod.push_back(orderArrivalTime);
-					if (!exponential_lead_time_dist)
+					if (exponential_lead_time_dist) {
+						orderArrivalTime = std::log(1 - event.second[i]) / (-ExponentialLeadTimeRate);
+					}
+					else {
+						orderArrivalTime = event.second[i] * event.first / prob;
 						ReceivedOrders.push_back(i);
+					}
+					ReceivedOrderTimesInThisPeriod.push_back(orderArrivalTime);						
 				}
 				else if (!exponential_lead_time_dist)
 				{
