@@ -1,0 +1,259 @@
+DynaPlex: Hardware Threads: 128, MPI: No, 
+DynaPlex: torch available, Version 2.1.0	
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":2,"p":4.0}
+MDP id:  lost_salespoisson_p4_l2_N20000
+Base stock opt gap:  5.53658  DCL opt gap:  0.00187585  DCL BS gap:  -5.24435
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":3,"p":4.0}
+MDP id:  lost_salespoisson_p4_l3_N20000
+Base stock opt gap:  8.18223  DCL opt gap:  0.00918799  DCL BS gap:  -7.55488
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":4,"p":4.0}
+MDP id:  lost_salespoisson_p4_l4_N20000
+Base stock opt gap:  9.92336  DCL opt gap:  0.0124047  DCL BS gap:  -9.01624
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":6,"p":4.0}
+MDP id:  lost_salespoisson_p4_l6_N20000
+BS cost:  5.5079  DCL cost:  4.87206  DCL BS gap:  -11.5443
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":8,"p":4.0}
+MDP id:  lost_salespoisson_p4_l8_N20000
+BS cost:  5.71969  DCL cost:  4.95078  DCL BS gap:  -13.4432
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":10,"p":4.0}
+MDP id:  lost_salespoisson_p4_l10_N20000
+BS cost:  5.87092  DCL cost:  5.02385  DCL BS gap:  -14.4282
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":2,"p":9.0}
+MDP id:  lost_salespoisson_p9_l2_N20000
+Base stock opt gap:  3.65354  DCL opt gap:  0.000242157  DCL BS gap:  -3.52452
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":3,"p":9.0}
+MDP id:  lost_salespoisson_p9_l3_N20000
+Base stock opt gap:  5.0932  DCL opt gap:  0.0122595  DCL BS gap:  -4.8347
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":4,"p":9.0}
+MDP id:  lost_salespoisson_p9_l4_N20000
+Base stock opt gap:  6.36331  DCL opt gap:  0.0103551  DCL BS gap:  -5.97288
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":6,"p":9.0}
+MDP id:  lost_salespoisson_p9_l6_N20000
+BS cost:  7.88644  DCL cost:  7.22889  DCL BS gap:  -8.3377
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":8,"p":9.0}
+MDP id:  lost_salespoisson_p9_l8_N20000
+BS cost:  8.31805  DCL cost:  7.49138  DCL BS gap:  -9.93824
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":10,"p":9.0}
+MDP id:  lost_salespoisson_p9_l10_N20000
+BS cost:  8.64139  DCL cost:  7.67552  DCL BS gap:  -11.1773
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":2,"p":19.0}
+MDP id:  lost_salespoisson_p19_l2_N20000
+Base stock opt gap:  2.31924  DCL opt gap:  0.00102519  DCL BS gap:  -2.26566
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":3,"p":19.0}
+MDP id:  lost_salespoisson_p19_l3_N20000
+Base stock opt gap:  2.89361  DCL opt gap:  0.00987522  DCL BS gap:  -2.80264
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":4,"p":19.0}
+MDP id:  lost_salespoisson_p19_l4_N20000
+Base stock opt gap:  3.8793  DCL opt gap:  0.0056873  DCL BS gap:  -3.72896
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":6,"p":19.0}
+MDP id:  lost_salespoisson_p19_l6_N20000
+BS cost:  10.1843  DCL cost:  9.64778  DCL BS gap:  -5.26779
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":8,"p":19.0}
+MDP id:  lost_salespoisson_p19_l8_N20000
+BS cost:  10.905  DCL cost:  10.1752  DCL BS gap:  -6.69219
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":10,"p":19.0}
+MDP id:  lost_salespoisson_p19_l10_N20000
+BS cost:  11.4746  DCL cost:  10.5743  DCL BS gap:  -7.84629
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":2,"p":39.0}
+MDP id:  lost_salespoisson_p39_l2_N20000
+Base stock opt gap:  0.921305  DCL opt gap:  0.00270828  DCL BS gap:  -0.910211
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":3,"p":39.0}
+MDP id:  lost_salespoisson_p39_l3_N20000
+Base stock opt gap:  1.7851  DCL opt gap:  0.00911317  DCL BS gap:  -1.74484
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":4,"p":39.0}
+MDP id:  lost_salespoisson_p39_l4_N20000
+Base stock opt gap:  2.48163  DCL opt gap:  0.0172703  DCL BS gap:  -2.40468
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":6,"p":39.0}
+MDP id:  lost_salespoisson_p39_l6_N20000
+BS cost:  12.3587  DCL cost:  11.9477  DCL BS gap:  -3.32592
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":8,"p":39.0}
+MDP id:  lost_salespoisson_p39_l8_N20000
+BS cost:  13.3863  DCL cost:  12.8106  DCL BS gap:  -4.30061
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"poisson"},"h":1.0,"id":"lost_sales","leadtime":10,"p":39.0}
+MDP id:  lost_salespoisson_p39_l10_N20000
+BS cost:  14.2357  DCL cost:  13.4869  DCL BS gap:  -5.26005
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":2,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l2_N20000
+Base stock opt gap:  4.5387  DCL opt gap:  0.0108174  DCL BS gap:  -4.33129
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":3,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l3_N20000
+Base stock opt gap:  6.37276  DCL opt gap:  0.00827157  DCL BS gap:  -5.98319
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":4,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l4_N20000
+Base stock opt gap:  7.84217  DCL opt gap:  0.0250729  DCL BS gap:  -7.24864
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":6,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l6_N20000
+BS cost:  11.8402  DCL cost:  10.7531  DCL BS gap:  -9.18106
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":8,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l8_N20000
+BS cost:  12.1096  DCL cost:  10.8378  DCL BS gap:  -10.5026
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":10,"p":4.0}
+MDP id:  lost_salesgeometric_p4_l10_N20000
+BS cost:  12.2996  DCL cost:  10.872  DCL BS gap:  -11.6066
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":2,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l2_N20000
+Base stock opt gap:  3.13024  DCL opt gap:  0.00616717  DCL BS gap:  -3.02925
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":3,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l3_N20000
+Base stock opt gap:  4.55494  DCL opt gap:  0.007593  DCL BS gap:  -4.34925
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":4,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l4_N20000
+Base stock opt gap:  5.82372  DCL opt gap:  0.0066658  DCL BS gap:  -5.49693
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":6,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l6_N20000
+BS cost:  18.4922  DCL cost:  17.1331  DCL BS gap:  -7.34997
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":8,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l8_N20000
+BS cost:  19.1661  DCL cost:  17.4777  DCL BS gap:  -8.80936
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":10,"p":9.0}
+MDP id:  lost_salesgeometric_p9_l10_N20000
+BS cost:  19.6789  DCL cost:  17.7082  DCL BS gap:  -10.0145
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":2,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l2_N20000
+Base stock opt gap:  1.99921  DCL opt gap:  0.00458791  DCL BS gap:  -1.95553
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":3,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l3_N20000
+Base stock opt gap:  2.99681  DCL opt gap:  0.00571352  DCL BS gap:  -2.90407
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":4,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l4_N20000
+Base stock opt gap:  3.90583  DCL opt gap:  0.0146934  DCL BS gap:  -3.74487
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":6,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l6_N20000
+BS cost:  25.5221  DCL cost:  24.2003  DCL BS gap:  -5.17911
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":8,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l8_N20000
+BS cost:  26.7931  DCL cost:  25.0742  DCL BS gap:  -6.41561
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":10,"p":19.0}
+MDP id:  lost_salesgeometric_p19_l10_N20000
+BS cost:  27.7977  DCL cost:  25.7126  DCL BS gap:  -7.50083
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":2,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l2_N20000
+Base stock opt gap:  1.29604  DCL opt gap:  0.00788245  DCL BS gap:  -1.27168
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":3,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l3_N20000
+Base stock opt gap:  1.95734  DCL opt gap:  0.0111842  DCL BS gap:  -1.90879
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":4,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l4_N20000
+Base stock opt gap:  2.56136  DCL opt gap:  0.0235579  DCL BS gap:  -2.47442
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":6,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l6_N20000
+BS cost:  32.5771  DCL cost:  31.4583  DCL BS gap:  -3.43425
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":8,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l8_N20000
+BS cost:  34.5528  DCL cost:  33.0493  DCL BS gap:  -4.35111
+
+
+{"bound_order_size_to_max_system_inv":false,"demand_dist":{"mean":5.0,"type":"geometric"},"h":1.0,"id":"lost_sales","leadtime":10,"p":39.0}
+MDP id:  lost_salesgeometric_p39_l10_N20000
+BS cost:  36.1613  DCL cost:  34.2917  DCL BS gap:  -5.17009
+
+
+DCL avg opt gap:  0.00934217  DCL avg bs gap all:  -5.95374  DCL avg bs gap large:  -7.96154
+DynaPlex: Finalizing. Time Elapsed: 03:02:16.070
+
+JOB STATISTICS
+==============
+Job ID: 7792540
+Cluster: snellius
+User/Group: temizoz/temizoz
+State: RUNNING
+Nodes: 1
+Cores per node: 128
+CPU Utilized: 00:00:00
+CPU Efficiency: 0.00% of 16-05:22:08 core-walltime
+Job Wall-clock time: 03:02:31
+Memory Utilized: 0.00 MB (estimated maximum)
+Memory Efficiency: 0.00% of 224.00 GB (224.00 GB/node)
+WARNING: Efficiency statistics may be misleading for RUNNING jobs.

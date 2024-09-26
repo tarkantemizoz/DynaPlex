@@ -17,6 +17,7 @@ namespace DynaPlex::Models {
 			int64_t MaxOrderSize;
 			int64_t MaxSystemInv;
 
+			std::vector<int64_t> demand_cycles;
 			std::vector<double> mean_demand;
 			std::vector<double> stdDemand;
 			std::vector<double> leadtime_probs;
@@ -33,9 +34,6 @@ namespace DynaPlex::Models {
 			bool randomYield;
 			bool censoredRandomYield;
 			bool yield_when_realized;
-
-			std::vector<double> fractiles;
-			std::vector<int64_t> demand_cycles;
 
 			int64_t randomYield_case;
 			std::vector<double> random_yield_probs_crossover;

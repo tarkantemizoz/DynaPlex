@@ -257,7 +257,7 @@ std::vector<std::vector<double>> TestPolicies(std::vector<DynaPlex::Policy> poli
 				VarGroup.Get("mean", initial_pol_cost);
 				VarGroup.Get("mean_gap", BSInitialPolGap);
 			}
-			dp.System() << VarGroup.Dump() << std::endl;
+			//dp.System() << VarGroup.Dump() << std::endl;
 		}
 
 		if (!censoredProblem) {
@@ -701,222 +701,6 @@ void Case2Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 	}
 }
 
-//void TestAll(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn_num_gen) {
-//	
-//	auto& dp = DynaPlexProvider::Get();
-//
-//	//std::vector<std::vector<int64_t>> demand_cycles_vec = { { 0 }, { 0, 1 }, { 0, 1, 2, 3, 4, 5 }, { 0, 0, 0, 0, 0, 1, 1 } };
-//	//std::vector<double> mean_demand_vec = { 3.0, 5.0, 7.0, 10.0 };
-//	//std::vector<double> mean_cycle_demand_vec = { 3.0, 5.0, 7.0, 10.0 };
-//	//std::vector<std::string> dist_token_vec = { "binom", "poisson", "neg_binom", "geometric" };
-//
-//	//std::vector<bool> stochastic_leadtime_vec = { false, true };
-//	//std::vector<int64_t> leadtime_values_vec = { 2, 4, 6, 8, 10 };
-//	//std::vector<std::vector<double>> leadtime_distribution_vec = 
-//	//{   { 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11, 1 / 11 },
-//	//	{ 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.3, 0.1, 0.0, 0.0 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.4 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.05, 0.05, 0.1, 0.1, 0.15, 0.25, 0.3 },
-//	//	{ 0.05, 0.05, 0.1, 0.1, 0.15, 0.25, 0.3, 0.0, 0.0, 0.0, 0.0 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.1, 0.15, 0.25, 0.25, 0.15, 0.1, 0.0 },
-//	//	{ 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5 }
-//	//};
-//	//std::vector<bool> order_crossover_vec = { false, true };
-//
-//	//bool censoredDemand;
-//	//bool censoredLeadTime;
-//	//bool censoredRandomYield;
-//	//instance_config.Get("censoredDemand", censoredDemand);
-//	//instance_config.Get("censoredLeadTime", censoredLeadTime);
-//	//instance_config.Get("censoredRandomYield", censoredRandomYield);
-//	//mdp_config.Set("censoredDemand", censoredDemand);
-//	//mdp_config.Set("censoredLeadtime", censoredLeadTime);
-//	//mdp_config.Set("censoredRandomYield", censoredRandomYield);
-//
-//	
-//	//std::vector<double> leadtime_probs;
-//	//std::vector<int64_t> demand_cycles;
-//	//std::vector<double> mean_demand;
-//	//std::vector<double> std_demand;
-//
-//	mdp_config.Set("evaluate", true);
-//	double p = 69.0;
-//	mdp_config.Set("p", p);
-//	DynaPlex::VarGroup instance_config;
-//	instance_config.Add("p", p);
-//
-//	//////////////////////////////cyclic demand case 2
-//	//double p = 39.0;
-//	//int64_t leadtime = 8;
-//	std::vector<int64_t> demand_cycles = { 0, 1, 2, 3, 4, 5, 6 };
-//	std::vector<double> mean_demand = { 3.0, 5.0, 5.0, 7.0, 7.0, 10.0, 10.0 };
-//	std::vector<double> std_demand = { std::sqrt(3.0), std::sqrt(5.0), std::sqrt(5.0), std::sqrt(7.0), std::sqrt(7.0), std::sqrt(10.0), std::sqrt(10.0) };
-//
-//	//std::vector<int64_t> demand_cycles = { 0, 1, 2, 3, 4, 5, 6 };
-//	//std::vector<double> mean_demand = { 3.0, 5.0, 5.0, 7.0, 7.0, 10.0, 10.0 };
-//	//double prob3 = 1.0 / (1.0 + 3.0);
-//	//double var3 = (1 - prob3) / (prob3 * prob3);
-//	//double stdev3 = std::sqrt(var3);
-//	//double prob5 = 1.0 / (1.0 + 5.0);
-//	//double var5 = (1 - prob5) / (prob5 * prob5);
-//	//double stdev5 = std::sqrt(var5);
-//	//double prob7 = 1.0 / (1.0 + 7.0);
-//	//double var7 = (1 - prob7) / (prob7 * prob7);
-//	//double stdev7 = std::sqrt(var7);
-//	//double prob10 = 1.0 / (1.0 + 10.0);
-//	//double var10 = (1 - prob10) / (prob10 * prob10);
-//	//double stdev10 = std::sqrt(var10);
-//	//std::vector<double> std_demand = { stdev3, stdev5, stdev5, stdev7, stdev7, stdev10, stdev10 };
-//
-//	//double p = 69.0;
-//	//int64_t leadtime = 10;
-//	//std::vector<int64_t> demand_cycles = { 0, 1, 2, 3, 4 };
-//	//std::vector<double> mean_demand = { 3.0, 10.0, 5.0, 7.0, 10.0};
-//	//double prob3 = 1.0 / (1.0 + 3.0);
-//	//double var3 = (1 - prob3) / (prob3 * prob3);
-//	//double stdev3 = std::sqrt(var3);
-//	//double prob5 = 1.0 / (1.0 + 5.0);
-//	//double var5 = (1 - prob5) / (prob5 * prob5);
-//	//double stdev5 = std::sqrt(var5);
-//	//double prob7 = 1.0 / (1.0 + 7.0);
-//	//double var7 = (1 - prob7) / (prob7 * prob7);
-//	//double stdev7 = std::sqrt(var7);
-//	//double prob10 = 1.0 / (1.0 + 10.0);
-//	//double var10 = (1 - prob10) / (prob10 * prob10);
-//	//double stdev10 = std::sqrt(var10);
-//	//std::vector<double> std_demand = { stdev3, std::sqrt(10.0), stdev5, stdev7, std::sqrt(10.0) };
-//
-//	//std::vector<int64_t> demand_cycles = { 0, 1, 2 };
-//	//std::vector<double> mean_demand = { 3.0, 10.0, 5.0};
-//	//double prob10 = 1.0 / (1.0 + 10.0);
-//	//double var10 = (1 - prob10) / (prob10 * prob10);
-//	//double stdev10 = std::sqrt(var10);
-//	//std::vector<double> std_demand = { std::sqrt(3.0), stdev10, std::sqrt(5.0) };
-//
-//	mdp_config.Set("mean_demand", 10.0);
-//	mdp_config.Set("demand_cycles", demand_cycles);
-//	mdp_config.Set("mean_cylic_demands", mean_demand);
-//	mdp_config.Set("std_cylic_demands", std_demand);
-//	instance_config.Add("demand_cycles", demand_cycles);
-//	instance_config.Add("mean_cylic_demands", mean_demand);
-//	instance_config.Add("std_cylic_demands", std_demand);
-//
-//	//////////////////////////////cyclic demand case 2
-//	// 
-//	// stoch 3
-//	// 39-10-pois, 69-5-geom
-//	//std::vector<int64_t> demand_cycles = { 0 };
-//	//double demand = 5.0;
-//	//mdp_config.Set("mean_demand", demand);
-//	//double prob = 1.0 / (1.0 + demand);
-//	//double var = (1 - prob) / (prob * prob);
-//	//double stdev = std::sqrt(var);
-//	//mdp_config.Set("stdDemand", stdev);
-//	//std::vector<double> mean_demand = { demand };
-//	//std::vector<double> std_demand = { stdev };
-//	//instance_config.Add("mean_demand", mean_demand);
-//	//instance_config.Add("std_demand", std_demand);
-//
-//	/////////////// deterministic lead time
-//	//int64_t leadtime = 10;
-//	//mdp_config.Set("leadtime", leadtime);
-//	//std::vector<double> leadtime_probs = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
-//	//instance_config.Add("leadtime", leadtime);
-//	/////////////////// deterministic lead time
-//
-//	/////////// stochastic lead time case 3
-//
-//	//std::vector<double> probs(11, 0.0);
-//	//std::vector<double> leadtime_probs = probs;
-//	//leadtime_probs[leadtime] = 1.0;
-//	std::vector<double> leadtime_probs = { 0.0, 0.0, 0.0, 0.0, 0.1, 0.15, 0.25, 0.25, 0.15, 0.1, 0.0 }; //true1
-//	//std::vector<double> leadtime_probs = { 0.0, 0.1, 0.2, 0.3, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; //false2
-//	//std::vector<double> leadtime_probs = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.4 }; //true3 cy1 p69
-//	//std::vector<double> leadtime_probs = { 0.05, 0.05, 0.1, 0.1, 0.15, 0.25, 0.3, 0.0, 0.0, 0.0, 0.0 }; //false4 cy4 p19
-//
-////	std::vector<double> leadtime_probs = { 0.0, 0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0, 0.0, 0.0 };
-//////	{ 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.3, 0.1, 0.0, 0.0 },
-////
-//	mdp_config.Set("leadtime_distribution", leadtime_probs);
-//	bool order_crossover = false;
-//	mdp_config.Set("order_crossover", order_crossover);
-//
-//	bool DeterministicLeadtime = false;
-//	bool randomYield = false;
-//
-//	instance_config.Add("leadtime_distribution", leadtime_probs);
-//	instance_config.Add("order_crossover", order_crossover);
-//	instance_config.Add("randomYield", randomYield);
-//
-//	mdp_config.Set("randomYield", true);
-//	mdp_config.Set("yield_when_realized", true);
-//	mdp_config.Set("randomYield_case", 1);
-//	mdp_config.Set("min_yield", 0.85);
-//	mdp_config.Add("random_yield_dist",
-//		DynaPlex::VarGroup({
-//		{"type", "poisson"},
-//		{"mean", 10.0}
-//			}));
-//	// instance information is set
-//
-//	mdp_config.Set("censoredDemand", false);
-//	std::pair<int64_t, int64_t> bounds = ReturnBounds(p / (p + 1.0), leadtime_probs, demand_cycles, mean_demand, std_demand);
-//	int64_t BestBSLevel = FindBestBSLevel(mdp_config);
-//	int64_t BestCOLevel = FindCOLevel(mdp_config);
-//	std::pair<int64_t, int64_t> bestParams = FindCBSLevels(mdp_config, BestBSLevel, bounds.second, BestCOLevel, bounds.first);
-//	int64_t BestSLevel = bestParams.first;
-//	int64_t BestrLevel = bestParams.second;
-//
-//	std::vector<bool> censoredDemand_vec = { false, true };
-//	std::vector<bool> censoredLeadTime_vec = { false, true };
-//	if (DeterministicLeadtime)
-//		censoredLeadTime_vec = { false };
-//	std::vector<bool> censoredRandomYield_vec = { false, true };
-//	if (!randomYield)
-//		censoredRandomYield_vec = { false };
-//
-//	for (bool censoredDemand : censoredDemand_vec) {
-//		for (bool censoredLeadtime : censoredLeadTime_vec) {
-//			for (bool censoredRandomYield : censoredRandomYield_vec) {
-//
-//				mdp_config.Set("censoredDemand", censoredDemand);
-//				mdp_config.Set("censoredLeadtime", censoredLeadtime);
-//				mdp_config.Set("censoredRandomYield", censoredRandomYield);
-//				instance_config.Set("censoredDemand", censoredDemand);
-//				instance_config.Set("censoredLeadtime", censoredLeadtime);
-//				instance_config.Set("censoredRandomYield", censoredRandomYield);
-//				bool censoredProblem = ((censoredDemand || censoredLeadtime || censoredRandomYield) ? true : false);
-//
-//				DynaPlex::MDP test_mdp = dp.GetMDP(mdp_config);
-//				DynaPlex::VarGroup policy_config;
-//				std::vector<DynaPlex::Policy> policies;
-//
-//				policy_config.Add("id", "base_stock");
-//				policy_config.Add("base_stock_level", BestBSLevel);
-//				auto best_bs_policy = test_mdp->GetPolicy(policy_config);
-//				policies.push_back(best_bs_policy);
-//
-//				policy_config.Set("id", "capped_base_stock");
-//				policy_config.Set("S", BestSLevel);
-//				policy_config.Set("r", BestrLevel);
-//				auto best_cbs_policy = test_mdp->GetPolicy(policy_config);
-//				policies.push_back(best_cbs_policy);
-//
-//				auto initial_policy = test_mdp->GetPolicy("greedy_capped_base_stock");
-//				policies.push_back(initial_policy);
-//
-//				auto path = dp.System().filepath(nn_loc, "dcl_gen" + nn_num_gen);
-//				auto nn_policy = dp.LoadPolicy(test_mdp, path);
-//				policies.push_back(nn_policy);
-//
-//				TestPoliciesNew(policies, mdp_config, instance_config, censoredProblem);
-//			}
-//		}
-//	}
-//}
-
 void PrintResultsCase1(std::vector<std::vector<std::vector<double>>> results, size_t period) {
 	auto& dp = DynaPlexProvider::Get();
 
@@ -959,7 +743,8 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 	DynaPlex::VarGroup test_config;
 	test_config.Add("number_of_trajectories", 1000);
 	config.Set("evaluate", true);
-	config.Set("demand_cycles", { 0 });
+	std::vector<int64_t> demand_cycles = { 0 };
+	config.Set("demand_cycles", demand_cycles);
 
 	if (censored) {
 		config.Set("censoredDemand", true);
@@ -996,7 +781,8 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 
 	int64_t meandemandIndex = 0;
 	for (double demand : mean_demand) {
-		config.Set("mean_demand", { demand } );
+		std::vector<double> demand_vec = { demand };
+		config.Set("mean_demand", demand_vec);
 
 		int64_t distIndex = 0;
 		for (std::string dist : dist_token) {
@@ -1027,7 +813,8 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 				double var = (1 - prob) / (prob * prob);
 				stdev = std::sqrt(var);
 			}
-			config.Set("stdDemand", { stdev });
+			std::vector<double> stdDemand_vec = { stdev };
+			config.Set("stdDemand", stdDemand_vec);
 			DynaPlex::DiscreteDist demand_dist = DiscreteDist::GetAdanEenigeResingDist(demand, stdev);
 
 			int64_t pIndex = 0;
@@ -1048,7 +835,7 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 
 					if (censored) 
 						config.Set("censoredDemand", false);
-					
+					//std::cout << config.Dump() << std::endl;
 					int64_t BestBSLevel = FindBestBSLevel(config);
 					int64_t BestCOLevel = FindCOLevel(config);
 					std::pair<int64_t, int64_t> bestParams = FindCBSLevels(config, BestBSLevel, MaxSystemInv, BestCOLevel, MaxOrderSize);
@@ -1114,7 +901,7 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 								VarGroup.Get("mean", best_cbs_cost);
 								VarGroup.Get("mean_gap", BSCBSGap);
 							}
-							dp.System() << VarGroup.Dump() << std::endl;
+							//dp.System() << VarGroup.Dump() << std::endl;
 						}
 
 						if (!censored){
@@ -1226,7 +1013,7 @@ void TrainNetwork() {
 		{"hidden_layers",DynaPlex::VarGroup::Int64Vec{256,128,128,128}}
 	};
 
-	int64_t num_gens = 6;
+	int64_t num_gens = 5;
 	DynaPlex::VarGroup dcl_config{
 		//use paper hyperparameters everywhere. 
 		{"N",5000000},
@@ -1244,9 +1031,9 @@ void TrainNetwork() {
 	dp.System() << "Network id:  " << loc << std::endl;
 
 	bool train = false;
-	bool evaluate_paper_instances_case1 = false;
-	bool evaluate_all_instances_case1 = false;
-	bool evaluate_all_instances_case2 = false;
+	bool evaluate_paper_instances_case1 = true;
+	bool evaluate_all_instances_case1 = true;
+	bool evaluate_all_instances_case2 = true;
 	bool evaluate_all_instances_case3 = true;
 	
 	DynaPlex::VarGroup config;
@@ -1289,13 +1076,12 @@ void TrainNetwork() {
 
 	if (dp.System().WorldRank() == 0 && evaluate_all_instances_case2)
 	{
-		Case2Results(config, loc, 5);
+		Case2Results(config, loc, num_gens);
 	}
 
 	if (dp.System().WorldRank() == 0 && evaluate_all_instances_case3)
 	{
-		Case3Results(config, loc, 5);
-		Case2Results(config, loc, 5);
+		Case3Results(config, loc, num_gens);
 	}
 }
 

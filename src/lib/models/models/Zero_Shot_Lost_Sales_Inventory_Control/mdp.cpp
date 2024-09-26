@@ -207,8 +207,6 @@ namespace DynaPlex::Models {
 			else
 				discount_factor = 1.0;
 
-			fractiles = { 0.09, 0.19, 0.29, 0.39, 0.49, 0.59, 0.69, 0.79, 0.89, 0.99 };
-
 			DynaPlex::DiscreteDist dist = DiscreteDist::GetAdanEenigeResingDist(max_demand, max_demand * 2);
 			//Initiate members that are computed from the parameters:
 			auto DemOverLeadtime = DiscreteDist::GetZeroDist();
