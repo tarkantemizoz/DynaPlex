@@ -65,6 +65,8 @@ namespace DynaPlex::Models {
 				config.Get("p", p);
 				order_crossover = false;
 				bool stochastic_leadtime = false;
+				if (config.HasKey("stochastic_leadtime"))
+					config.Get("stochastic_leadtime", stochastic_leadtime);
 
 				config.Get("demand_cycles", demand_cycles);
 				config.Get("mean_demand", mean_demand);
@@ -72,7 +74,7 @@ namespace DynaPlex::Models {
 				if (mean_demand.size() != demand_cycles.size() || stdDemand.size() != demand_cycles.size())
 					throw DynaPlex::Error("MDP instance: Size of mean/std demand should be equal to demand cycle size.");
 
-				if (config.HasKey("leadtime")) {
+				if (!stochastic_leadtime) {
 					std::vector<double> probs(max_leadtime + 1, 0.0);
 					leadtime_probs = probs;
 					censoredLeadtime = false;
@@ -1262,10 +1264,6 @@ namespace DynaPlex::Models {
 				for (int64_t i = max_leadtime; i >= 0; i--) {
 					features.Add(state.estimated_leadtime_probs[i]);
 				}
-				//if (state.order_crossover)
-				//	features.Add(1);
-				//else
-				//	features.Add(0);
 			}
 			else {
 				features.Add(state.min_leadtime);

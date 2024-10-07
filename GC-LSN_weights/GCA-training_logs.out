@@ -1,0 +1,175 @@
+DynaPlex: Hardware Threads: 192, MPI: Yes, Rank: 4/5
+DynaPlex: Hardware Threads: 192, MPI: Yes, Rank: 3/5
+DynaPlex: Hardware Threads: 192, MPI: Yes, Rank: 2/5
+DynaPlex: Hardware Threads: 192, MPI: Yes, Rank: 1/5
+DynaPlex: Hardware Threads: 192, MPI: Yes, Rank: 0/5
+DynaPlex: torch available, Version 2.1.0	
+Network id:  GC-LSN-Big_tsl_tcd_large_new
+Generating 5000000 samples based on policy type: greedy_capped_base_stock
+Progress (node 0 only):
+>>>>>10>>>>>20>>>>>30>>>>>40>>>>>50>>>>>60>>>>>70>>>>>80>>>>>90>>>>>100
+Simulator statistics 
+5000000 samples; 48% at Z>0.5; 22% at Z>1; 12% at Z>1.5; 8% at Z>2; 6% at Z>2.5; 4% at Z>3; 
+Avg Mean of Q values: 1240.09
+Elapsed time: 00:21:27.737
+loaded 5000000 samples from /home/temizoz/DynaPlexPrivate/IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control_=uuGYE-TvwOoH=8nvlg4X01f0QforKXrz6ZcufCP0xg__/samples_gen0.json
+{"hidden_layers":[256,128,128,128],"type":"mlp"}
+EPOCHS: 0 - Training Loss: 2.25849 (10%) - Validation Loss: 2.13705 (11%) - Cost Imp.: -13.0328 Time: 00:01:10.979
+EPOCHS: 5 - Training Loss: 1.92277 (14%) - Validation Loss: 1.92037 (14%) - Cost Imp.: -13.8981 Time: 00:06:08.320
+EPOCHS: 10 - Training Loss: 1.8563 (15%) - Validation Loss: 1.8562 (15%) - Cost Imp.: -14.0462 Time: 00:11:03.828
+EPOCHS: 15 - Training Loss: 1.82759 (16%) - Validation Loss: 1.83775 (15%) - Cost Imp.: -14.0916 Time: 00:16:00.862
+EPOCHS: 20 - Training Loss: 1.81095 (16%) - Validation Loss: 1.82441 (16%) - Cost Imp.: -14.0995 Time: 00:20:59.517
+EPOCHS: 25 - Training Loss: 1.79935 (16%) - Validation Loss: 1.80863 (16%) - Cost Imp.: -14.1093 Time: 00:26:00.155
+EPOCHS: 30 - Training Loss: 1.79084 (16%) - Validation Loss: 1.80321 (16%) - Cost Imp.: -14.1257 Time: 00:31:16.497
+EPOCHS: 35 - Training Loss: 1.78324 (16%) - Validation Loss: 1.79404 (16%) - Cost Imp.: -14.1394 Time: 00:36:38.721
+EPOCHS: 40 - Training Loss: 1.77733 (16%) - Validation Loss: 1.7959 (16%) - Cost Imp.: -14.1005 Time: 00:41:52.100
+EPOCHS: 45 - Training Loss: 1.77301 (16%) - Validation Loss: 1.79303 (16%) - Cost Imp.: -14.1252 Time: 00:47:07.432
+EPOCHS: 50 - Training Loss: 1.76811 (17%) - Validation Loss: 1.78735 (16%) - Cost Imp.: -14.1662 Time: 00:52:23.860
+EPOCHS: 55 - Training Loss: 1.76467 (17%) - Validation Loss: 1.78686 (16%) - Cost Imp.: -14.1324 Time: 00:57:39.187
+EPOCHS: 60 - Training Loss: 1.7613 (17%) - Validation Loss: 1.77075 (17%) - Cost Imp.: -14.1691 Time: 01:02:56.008
+EPOCHS: 65 - Training Loss: 1.7583 (17%) - Validation Loss: 1.77414 (16%) - Cost Imp.: -14.1713 Time: 01:08:13.283
+EPOCHS: 70 - Training Loss: 1.75599 (17%) - Validation Loss: 1.77026 (17%) - Cost Imp.: -14.1862 Time: 01:13:30.724
+EPOCHS: 75 - Training Loss: 1.75431 (17%) - Validation Loss: 1.77181 (17%) - Cost Imp.: -14.1714 Time: 01:18:48.211
+EPOCHS: 80 - Training Loss: 1.75157 (17%) - Validation Loss: 1.76644 (17%) - Cost Imp.: -14.1559 Time: 01:24:05.318
+EPOCHS: 85 - Training Loss: 1.74973 (17%) - Validation Loss: 1.76101 (17%) - Cost Imp.: -14.1893 Time: 01:29:21.916
+EPOCHS: 90 - Training Loss: 1.74844 (17%) - Validation Loss: 1.77154 (17%) - Cost Imp.: -14.1926 Time: 01:34:38.777
+EPOCHS: 95 - Training Loss: 1.74676 (17%) - Validation Loss: 1.76249 (17%) - Cost Imp.: -14.1775 Time: 01:39:55.230
+Actual Epochs/Max Epochs: 99/100 - Best Training Loss: 1.74599 (17%) - Best Validation Loss: 1.75719 (17%) - Best Cost Improvement : -14.1995
+Saved policy stats:  - Training Loss: 1.75074 (17%) - Validation Loss: 1.75719 (17%) - Cost Improvement : -14.1869
+Training finished, total time elapsed: 02:11:21.121
+Generating 5000000 samples based on policy type: NN_Policy
+Progress (node 0 only):
+>>>>>10>>>>>20>>>>>30>>>>>40>>>>>50>>>>>60>>>>>70>>>>>80>>>>>90>>>>>100
+Simulator statistics 
+5000000 samples; 41% at Z>0.5; 13% at Z>1; 4% at Z>1.5; 2% at Z>2; 1% at Z>2.5; 1% at Z>3; 
+Avg Mean of Q values: 1049.82
+Elapsed time: 04:11:24.574
+loaded 5000000 samples from /home/temizoz/DynaPlexPrivate/IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control_=uuGYE-TvwOoH=8nvlg4X01f0QforKXrz6ZcufCP0xg__/samples_gen1.json
+{"hidden_layers":[256,128,128,128],"type":"mlp"}
+EPOCHS: 0 - Training Loss: 2.19918 (11%) - Validation Loss: 2.12033 (11%) - Cost Imp.: -0.540906 Time: 00:00:55.419
+EPOCHS: 5 - Training Loss: 1.94513 (14%) - Validation Loss: 1.9389 (14%) - Cost Imp.: -0.965839 Time: 00:05:53.236
+EPOCHS: 10 - Training Loss: 1.90543 (14%) - Validation Loss: 1.90773 (14%) - Cost Imp.: -1.02499 Time: 00:10:38.674
+EPOCHS: 15 - Training Loss: 1.88696 (15%) - Validation Loss: 1.89596 (15%) - Cost Imp.: -1.06285 Time: 00:15:14.297
+EPOCHS: 20 - Training Loss: 1.87741 (15%) - Validation Loss: 1.88363 (15%) - Cost Imp.: -1.06395 Time: 00:19:51.309
+EPOCHS: 25 - Training Loss: 1.87037 (15%) - Validation Loss: 1.8779 (15%) - Cost Imp.: -1.09538 Time: 00:24:29.284
+EPOCHS: 30 - Training Loss: 1.8651 (15%) - Validation Loss: 1.868 (15%) - Cost Imp.: -1.09099 Time: 00:29:15.747
+EPOCHS: 35 - Training Loss: 1.86085 (15%) - Validation Loss: 1.87107 (15%) - Cost Imp.: -1.08673 Time: 00:34:08.097
+EPOCHS: 40 - Training Loss: 1.8577 (15%) - Validation Loss: 1.86729 (15%) - Cost Imp.: -1.09477 Time: 00:39:02.274
+EPOCHS: 45 - Training Loss: 1.85491 (15%) - Validation Loss: 1.87385 (15%) - Cost Imp.: -1.0536 Time: 00:43:56.768
+EPOCHS: 50 - Training Loss: 1.85246 (15%) - Validation Loss: 1.86472 (15%) - Cost Imp.: -1.0927 Time: 00:48:52.301
+EPOCHS: 55 - Training Loss: 1.85082 (15%) - Validation Loss: 1.86597 (15%) - Cost Imp.: -1.08703 Time: 00:53:48.534
+EPOCHS: 60 - Training Loss: 1.84909 (15%) - Validation Loss: 1.86765 (15%) - Cost Imp.: -1.07976 Time: 00:58:44.489
+EPOCHS: 65 - Training Loss: 1.84806 (15%) - Validation Loss: 1.85889 (15%) - Cost Imp.: -1.10124 Time: 01:03:41.127
+EPOCHS: 70 - Training Loss: 1.84617 (15%) - Validation Loss: 1.86628 (15%) - Cost Imp.: -1.11037 Time: 01:08:38.082
+EPOCHS: 75 - Training Loss: 1.84513 (15%) - Validation Loss: 1.86819 (15%) - Cost Imp.: -1.1299 Time: 01:13:35.569
+EPOCHS: 80 - Training Loss: 1.84401 (15%) - Validation Loss: 1.85671 (15%) - Cost Imp.: -1.11048 Time: 01:18:32.889
+EPOCHS: 85 - Training Loss: 1.84314 (15%) - Validation Loss: 1.85244 (15%) - Cost Imp.: -1.1212 Time: 01:23:30.381
+EPOCHS: 90 - Training Loss: 1.84183 (15%) - Validation Loss: 1.85488 (15%) - Cost Imp.: -1.10705 Time: 01:28:28.191
+EPOCHS: 95 - Training Loss: 1.84086 (15%) - Validation Loss: 1.85296 (15%) - Cost Imp.: -1.12008 Time: 01:33:26.422
+Actual Epochs/Max Epochs: 100/100 - Best Training Loss: 1.84034 (15%) - Best Validation Loss: 1.85235 (15%) - Best Cost Improvement : -1.1444
+Saved policy stats:  - Training Loss: 1.84275 (15%) - Validation Loss: 1.85235 (15%) - Cost Improvement : -1.10608
+Training finished, total time elapsed: 05:54:34.565
+Generating 5000000 samples based on policy type: NN_Policy
+Progress (node 0 only):
+>>>>>10>>>>>20>>>>>30>>>>>40>>>>>50>>>>>60>>>>>70>>>>>80>>>>>90>>>>>100
+Simulator statistics 
+5000000 samples; 41% at Z>0.5; 12% at Z>1; 4% at Z>1.5; 2% at Z>2; 1% at Z>2.5; 0% at Z>3; 
+Avg Mean of Q values: 1032.68
+Elapsed time: 07:59:14.861
+loaded 5000000 samples from /home/temizoz/DynaPlexPrivate/IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control_=uuGYE-TvwOoH=8nvlg4X01f0QforKXrz6ZcufCP0xg__/samples_gen2.json
+{"hidden_layers":[256,128,128,128],"type":"mlp"}
+EPOCHS: 0 - Training Loss: 2.18438 (11%) - Validation Loss: 2.07075 (12%) - Cost Imp.: 0.0856571 Time: 00:00:54.279
+EPOCHS: 5 - Training Loss: 1.89432 (15%) - Validation Loss: 1.88741 (15%) - Cost Imp.: -0.215836 Time: 00:05:31.337
+EPOCHS: 10 - Training Loss: 1.84101 (15%) - Validation Loss: 1.84744 (15%) - Cost Imp.: -0.253625 Time: 00:10:08.603
+EPOCHS: 15 - Training Loss: 1.8185 (16%) - Validation Loss: 1.82224 (16%) - Cost Imp.: -0.308693 Time: 00:14:47.918
+EPOCHS: 20 - Training Loss: 1.80603 (16%) - Validation Loss: 1.80655 (16%) - Cost Imp.: -0.332808 Time: 00:19:27.864
+EPOCHS: 25 - Training Loss: 1.79749 (16%) - Validation Loss: 1.80363 (16%) - Cost Imp.: -0.332445 Time: 00:24:10.384
+EPOCHS: 30 - Training Loss: 1.79105 (16%) - Validation Loss: 1.79461 (16%) - Cost Imp.: -0.3331 Time: 00:29:02.883
+EPOCHS: 35 - Training Loss: 1.78676 (16%) - Validation Loss: 1.79252 (16%) - Cost Imp.: -0.328851 Time: 00:34:04.577
+EPOCHS: 40 - Training Loss: 1.7827 (16%) - Validation Loss: 1.78721 (16%) - Cost Imp.: -0.359454 Time: 00:39:07.343
+EPOCHS: 45 - Training Loss: 1.77987 (16%) - Validation Loss: 1.79007 (16%) - Cost Imp.: -0.350327 Time: 00:44:11.436
+EPOCHS: 50 - Training Loss: 1.77743 (16%) - Validation Loss: 1.78594 (16%) - Cost Imp.: -0.342622 Time: 00:49:17.650
+EPOCHS: 55 - Training Loss: 1.77507 (16%) - Validation Loss: 1.78628 (16%) - Cost Imp.: -0.364192 Time: 00:54:25.385
+EPOCHS: 60 - Training Loss: 1.77326 (16%) - Validation Loss: 1.78297 (16%) - Cost Imp.: -0.361545 Time: 00:59:34.131
+EPOCHS: 65 - Training Loss: 1.77156 (17%) - Validation Loss: 1.77837 (16%) - Cost Imp.: -0.366002 Time: 01:04:43.687
+EPOCHS: 70 - Training Loss: 1.77004 (17%) - Validation Loss: 1.78769 (16%) - Cost Imp.: -0.333034 Time: 01:09:53.309
+EPOCHS: 75 - Training Loss: 1.76874 (17%) - Validation Loss: 1.7785 (16%) - Cost Imp.: -0.355593 Time: 01:15:03.333
+EPOCHS: 80 - Training Loss: 1.76728 (17%) - Validation Loss: 1.77919 (16%) - Cost Imp.: -0.360209 Time: 01:20:13.848
+EPOCHS: 85 - Training Loss: 1.76624 (17%) - Validation Loss: 1.7872 (16%) - Cost Imp.: -0.372042 Time: 01:25:24.259
+Actual Epochs/Max Epochs: 89/100 - Best Training Loss: 1.76563 (17%) - Best Validation Loss: 1.77564 (16%) - Best Cost Improvement : -0.383719
+Saved policy stats:  - Training Loss: 1.7691 (17%) - Validation Loss: 1.77564 (16%) - Cost Improvement : -0.363224
+Training finished, total time elapsed: 09:33:17.895
+Generating 5000000 samples based on policy type: NN_Policy
+Progress (node 0 only):
+>>>>>10>>>>>20>>>>>30>>>>>40>>>>>50>>>>>60>>>>>70>>>>>80>>>>>90>>>>>100
+Simulator statistics 
+5000000 samples; 39% at Z>0.5; 11% at Z>1; 3% at Z>1.5; 1% at Z>2; 1% at Z>2.5; 0% at Z>3; 
+Avg Mean of Q values: 1023.16
+Elapsed time: 11:32:51.888
+loaded 5000000 samples from /home/temizoz/DynaPlexPrivate/IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control_=uuGYE-TvwOoH=8nvlg4X01f0QforKXrz6ZcufCP0xg__/samples_gen3.json
+{"hidden_layers":[256,128,128,128],"type":"mlp"}
+EPOCHS: 0 - Training Loss: 2.22335 (10%) - Validation Loss: 2.10756 (12%) - Cost Imp.: 0.390893 Time: 00:00:51.259
+EPOCHS: 5 - Training Loss: 1.92783 (14%) - Validation Loss: 1.91237 (14%) - Cost Imp.: 0.0521841 Time: 00:05:07.991
+EPOCHS: 10 - Training Loss: 1.87346 (15%) - Validation Loss: 1.87696 (15%) - Cost Imp.: 0.0035527 Time: 00:09:25.956
+EPOCHS: 15 - Training Loss: 1.85147 (15%) - Validation Loss: 1.84688 (15%) - Cost Imp.: -0.0494131 Time: 00:13:45.965
+EPOCHS: 20 - Training Loss: 1.83886 (15%) - Validation Loss: 1.83595 (15%) - Cost Imp.: -0.0569338 Time: 00:18:07.268
+EPOCHS: 25 - Training Loss: 1.83045 (16%) - Validation Loss: 1.83602 (15%) - Cost Imp.: -0.102959 Time: 00:22:30.826
+EPOCHS: 30 - Training Loss: 1.82472 (16%) - Validation Loss: 1.82486 (16%) - Cost Imp.: -0.0637144 Time: 00:27:04.564
+EPOCHS: 35 - Training Loss: 1.8204 (16%) - Validation Loss: 1.82401 (16%) - Cost Imp.: -0.0810196 Time: 00:31:45.773
+EPOCHS: 40 - Training Loss: 1.81654 (16%) - Validation Loss: 1.82349 (16%) - Cost Imp.: -0.111333 Time: 00:36:28.986
+EPOCHS: 45 - Training Loss: 1.81373 (16%) - Validation Loss: 1.81806 (16%) - Cost Imp.: -0.0942264 Time: 00:41:13.482
+EPOCHS: 50 - Training Loss: 1.81071 (16%) - Validation Loss: 1.82048 (16%) - Cost Imp.: -0.101986 Time: 00:45:58.218
+EPOCHS: 55 - Training Loss: 1.80907 (16%) - Validation Loss: 1.82072 (16%) - Cost Imp.: -0.104193 Time: 00:50:43.199
+EPOCHS: 60 - Training Loss: 1.80666 (16%) - Validation Loss: 1.81476 (16%) - Cost Imp.: -0.0885825 Time: 00:55:28.710
+EPOCHS: 65 - Training Loss: 1.80542 (16%) - Validation Loss: 1.8109 (16%) - Cost Imp.: -0.0980149 Time: 01:00:14.551
+EPOCHS: 70 - Training Loss: 1.80409 (16%) - Validation Loss: 1.81274 (16%) - Cost Imp.: -0.0918453 Time: 01:05:00.725
+EPOCHS: 75 - Training Loss: 1.80237 (16%) - Validation Loss: 1.81023 (16%) - Cost Imp.: -0.104199 Time: 01:09:46.800
+EPOCHS: 80 - Training Loss: 1.80106 (16%) - Validation Loss: 1.81009 (16%) - Cost Imp.: -0.101248 Time: 01:14:33.167
+EPOCHS: 85 - Training Loss: 1.80027 (16%) - Validation Loss: 1.80539 (16%) - Cost Imp.: -0.0994603 Time: 01:19:19.753
+EPOCHS: 90 - Training Loss: 1.79943 (16%) - Validation Loss: 1.81154 (16%) - Cost Imp.: -0.0904047 Time: 01:24:06.669
+EPOCHS: 95 - Training Loss: 1.79828 (16%) - Validation Loss: 1.81053 (16%) - Cost Imp.: -0.108849 Time: 01:28:53.759
+Actual Epochs/Max Epochs: 100/100 - Best Training Loss: 1.79745 (16%) - Best Validation Loss: 1.80261 (16%) - Best Cost Improvement : -0.122932
+Saved policy stats:  - Training Loss: 1.79795 (16%) - Validation Loss: 1.80261 (16%) - Cost Improvement : -0.105961
+Training finished, total time elapsed: 13:10:58.857
+Generating 5000000 samples based on policy type: NN_Policy
+Progress (node 0 only):
+>>>>>10>>>>>20>>>>>30>>>>>40>>>>>50>>>>>60>>>>>70>>>>>80>>>>>90>>>>>100
+Simulator statistics 
+5000000 samples; 40% at Z>0.5; 11% at Z>1; 3% at Z>1.5; 1% at Z>2; 1% at Z>2.5; 0% at Z>3; 
+Avg Mean of Q values: 1018.55
+Elapsed time: 15:12:13.069
+loaded 5000000 samples from /home/temizoz/DynaPlexPrivate/IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control_=uuGYE-TvwOoH=8nvlg4X01f0QforKXrz6ZcufCP0xg__/samples_gen4.json
+{"hidden_layers":[256,128,128,128],"type":"mlp"}
+EPOCHS: 0 - Training Loss: 2.21533 (10%) - Validation Loss: 2.10158 (12%) - Cost Imp.: 0.538685 Time: 00:00:54.684
+EPOCHS: 5 - Training Loss: 1.91669 (14%) - Validation Loss: 1.91171 (14%) - Cost Imp.: 0.123773 Time: 00:05:32.985
+EPOCHS: 10 - Training Loss: 1.85713 (15%) - Validation Loss: 1.85257 (15%) - Cost Imp.: 0.0279979 Time: 00:10:12.561
+EPOCHS: 15 - Training Loss: 1.83228 (16%) - Validation Loss: 1.83448 (15%) - Cost Imp.: 0.0209205 Time: 00:14:53.810
+EPOCHS: 20 - Training Loss: 1.81931 (16%) - Validation Loss: 1.82872 (16%) - Cost Imp.: 0.0274756 Time: 00:19:36.325
+EPOCHS: 25 - Training Loss: 1.81108 (16%) - Validation Loss: 1.81898 (16%) - Cost Imp.: 0.00388492 Time: 00:24:21.354
+EPOCHS: 30 - Training Loss: 1.80492 (16%) - Validation Loss: 1.81658 (16%) - Cost Imp.: -0.0303439 Time: 00:29:16.292
+EPOCHS: 35 - Training Loss: 1.80039 (16%) - Validation Loss: 1.80649 (16%) - Cost Imp.: 0.0155961 Time: 00:34:20.578
+EPOCHS: 40 - Training Loss: 1.79608 (16%) - Validation Loss: 1.808 (16%) - Cost Imp.: 0.0127611 Time: 00:39:26.853
+EPOCHS: 45 - Training Loss: 1.79305 (16%) - Validation Loss: 1.81117 (16%) - Cost Imp.: 0.0220452 Time: 00:44:33.922
+EPOCHS: 50 - Training Loss: 1.79045 (16%) - Validation Loss: 1.79821 (16%) - Cost Imp.: -0.0243514 Time: 00:49:41.698
+EPOCHS: 55 - Training Loss: 1.78857 (16%) - Validation Loss: 1.79264 (16%) - Cost Imp.: -0.0278954 Time: 00:54:50.079
+EPOCHS: 60 - Training Loss: 1.78666 (16%) - Validation Loss: 1.80726 (16%) - Cost Imp.: 0.0142026 Time: 00:59:58.971
+EPOCHS: 65 - Training Loss: 1.78431 (16%) - Validation Loss: 1.79444 (16%) - Cost Imp.: -0.0419158 Time: 01:05:08.087
+EPOCHS: 70 - Training Loss: 1.78323 (16%) - Validation Loss: 1.80052 (16%) - Cost Imp.: -0.0444059 Time: 01:10:17.238
+Actual Epochs/Max Epochs: 74/100 - Best Training Loss: 1.78187 (16%) - Best Validation Loss: 1.78922 (16%) - Best Cost Improvement : -0.0455574
+Saved policy stats:  - Training Loss: 1.78728 (16%) - Validation Loss: 1.78922 (16%) - Cost Improvement : -0.027523
+Training finished, total time elapsed: 16:31:01.895
+
+JOB STATISTICS
+==============
+Job ID: 7792540
+Cluster: snellius
+User/Group: temizoz/temizoz
+State: RUNNING
+Nodes: 1
+Cores per node: 128
+CPU Utilized: 00:00:00
+CPU Efficiency: 0.00% of 16-05:22:08 core-walltime
+Job Wall-clock time: 03:02:31
+Memory Utilized: 0.00 MB (estimated maximum)
+Memory Efficiency: 0.00% of 224.00 GB (224.00 GB/node)
+WARNING: Efficiency statistics may be misleading for RUNNING jobs.

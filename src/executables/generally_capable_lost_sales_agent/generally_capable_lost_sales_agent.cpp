@@ -257,7 +257,6 @@ std::vector<std::vector<double>> TestPolicies(std::vector<DynaPlex::Policy> poli
 				VarGroup.Get("mean", initial_pol_cost);
 				VarGroup.Get("mean_gap", BSInitialPolGap);
 			}
-			//dp.System() << VarGroup.Dump() << std::endl;
 		}
 
 		if (!censoredProblem) {
@@ -364,7 +363,8 @@ void Case3Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 	std::vector<int64_t> periods = { 200, 500, 1000, 2000, 5000 };
 
 	mdp_config.Set("evaluate", true);
-	for (bool ordercrossover : {  false, true }) {
+	mdp_config.Set("stochastic_leadtime", true);
+	for (bool ordercrossover : { true }) {
 
 		std::vector<std::vector<std::vector<std::vector<double>>>> Results;
 		mdp_config.Set("order_crossover", ordercrossover);
@@ -438,7 +438,6 @@ void Case3Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 						for (bool censoredDemand : censoredDemand_vec) {
 							mdp_config.Set("censoredDemand", censoredDemand);
 							instance_config.Set("censoredDemand", censoredDemand);
-							bool censored = (censoredDemand || censoredLeadtime) ? true : false;
 	
 							DynaPlex::MDP test_mdp = dp.GetMDP(mdp_config);
 							DynaPlex::VarGroup policy_config;
@@ -544,6 +543,7 @@ void Case2Results(DynaPlex::VarGroup& mdp_config, std::string nn_loc, int64_t nn
 	std::vector<int64_t> periods = { 200, 500, 1000, 2000, 5000 };
 
 	mdp_config.Set("evaluate", true);
+	mdp_config.Set("stochastic_leadtime", false);
 	for (int64_t i = 0; i < demand_cycles_vec.size(); i++) {
 
 		std::vector<std::vector<std::vector<std::vector<double>>>> SameCycleResults;
@@ -742,6 +742,7 @@ void Case1Results(DynaPlex::VarGroup& config, std::string loc, int64_t num_gen, 
 
 	DynaPlex::VarGroup test_config;
 	test_config.Add("number_of_trajectories", 1000);
+	config.Set("stochastic_leadtime", false);
 	config.Set("evaluate", true);
 	std::vector<int64_t> demand_cycles = { 0 };
 	config.Set("demand_cycles", demand_cycles);
@@ -1030,7 +1031,7 @@ void TrainNetwork() {
 	std::string loc = id + exp_num;
 	dp.System() << "Network id:  " << loc << std::endl;
 
-	bool train = false;
+	bool train = true;
 	bool evaluate_paper_instances_case1 = true;
 	bool evaluate_all_instances_case1 = true;
 	bool evaluate_all_instances_case2 = true;
