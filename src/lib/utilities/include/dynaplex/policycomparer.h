@@ -12,7 +12,7 @@ namespace DynaPlex::Utilities {
 		void CheckTrajectoriesInfiniteHorizon(std::span<DynaPlex::Trajectory>, int64_t) const;
 		void CheckTrajectoriesFiniteHorizon(std::span<DynaPlex::Trajectory>) const;
 
-		void ComputeReturns(std::span<double>& ReturnPerTrajectory, const DynaPlex::Policy& policy, int64_t offset) const;
+		void ComputeReturns(std::span<std::vector<double>>& ReturnPerTrajectory, const DynaPlex::Policy& policy, int64_t offset) const;
 
 	public:
 		/**
@@ -47,7 +47,8 @@ namespace DynaPlex::Utilities {
 		std::vector<VarGroup> Compare(std::vector<DynaPlex::Policy> policies, int64_t index_of_benchmark = -1, bool compute_gap = false, bool rewardProblem = false) const;
 
 	private:
-		int64_t number_of_trajectories, periods_per_trajectory, warmup_periods, max_periods_until_error, rng_seed;
+		int64_t number_of_trajectories, periods_per_trajectory, warmup_periods, max_periods_until_error, rng_seed, number_of_statistics;
+		bool avoidable_cost, print_standard_error;
 		DynaPlex::MDP mdp;
 		System system;
 

@@ -193,7 +193,7 @@ namespace DynaPlex::DCL {
 				competing_actions[i] = paired[i].first;
 			}
 			if (iter == 0 && !prescribed_action_allowed) {
-				prescribed_action_initial_policy = competing_actions.back();
+				prescribed_action_initial_policy = 0;// competing_actions.back();
 			}
 			competing_actions.resize(top_m); // keep only top_m performing actions
 

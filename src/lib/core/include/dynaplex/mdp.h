@@ -205,6 +205,11 @@ namespace DynaPlex
 		 */
 		virtual bool IncorporateUntilAction(std::span<DynaPlex::Trajectory> trajectories, int64_t MaxPeriodCount = std::numeric_limits<int64_t>::max()) const = 0;
 
+		/**
+		 * Returns useful state statistics.
+		 * Throws if not defined.
+		 */
+		virtual std::vector<double> ReturnUsefulStatistics(const DynaPlex::dp_State& dp_state) const = 0;
 
 		/**
 		 * Returns -1.0 or 1.0, depending on whether the mdp objective is minimization of maximization. 
@@ -227,6 +232,10 @@ namespace DynaPlex
 		 * Updates the Category in the trajectory, and re-initiates PeriodCount, CumulativeReturn, and EffectiveDiscountFactor.
 		 */
 		virtual void InitiateState(std::span<DynaPlex::Trajectory> trajectories,const DynaPlex::dp_State& state) const = 0;
+		/**
+		 * Sets the states in the trajectories to a specific state value.
+		 */
+		virtual void InitiateStateVariables(std::span<DynaPlex::Trajectory> trajectories) const = 0;
 
 		/**
 		 * Appends all possible transitions from a certain state that awaits an event to the transitions parameter.

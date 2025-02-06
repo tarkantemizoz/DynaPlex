@@ -31,7 +31,7 @@ namespace DynaPlex::DCL {
 		int64_t sampling_time_out, H, M, N, L, Num_Promising_Actions, reinitiate_counter, json_save_format;
 		int64_t seed_offset;
 
-		bool ReUseHighQualitySamples;
+		bool InitiateStateVariables;
 		bool SimulateOnlyPromisingActions;
 		bool enable_sequential_halving,silent;
 		//probability that a sample is taken on a specific action-awaiting state. 

@@ -203,10 +203,12 @@ namespace DynaPlex
 			throw DynaPlex::Error("DiscreteDist: Probabilities should be nonnegative and sum to 1.0");
 		}
 		double epsilon_used = epsilon;
+		double trimmedProb = 0.0;
 		size_t iter = 0;
 		while (ToBeTrimmed[iter] <= epsilon_used)
 		{
 			iter++;
+			trimmedProb += ToBeTrimmed[iter];
 		}
 		size_t minPos = iter;
 
@@ -214,6 +216,7 @@ namespace DynaPlex
 		while (ToBeTrimmed[iter] < epsilon_used)
 		{
 			iter--;
+			trimmedProb += ToBeTrimmed[iter];
 		}
 		size_t maxPos = iter;
 
@@ -221,10 +224,10 @@ namespace DynaPlex
 		{
 			std::vector<double> TrimmedPMF{};
 			TrimmedPMF.reserve(maxPos + 1 - minPos);
-
+			double addProb = trimmedProb / (maxPos + 1 - minPos);
 			for (size_t i = minPos; i <= maxPos; i++)
 			{
-				TrimmedPMF.push_back(ToBeTrimmed[i]);
+				TrimmedPMF.push_back(ToBeTrimmed[i] + addProb);
 			}
 			min += static_cast<int64_t>(minPos);
 			ToBeTrimmed = std::move(TrimmedPMF);
@@ -413,10 +416,11 @@ namespace DynaPlex
 		//Sorts in ascending order for numerical stability.
 		std::sort(copy.begin(), copy.end());
 		if (std::any_of(copy.begin(), copy.end(), [](double num) { return std::isnan(num); })) {
-			std::cout << "There is nan in copy:  " << std::endl;;
+			std::cout << "There is nan in copy:  " << std::endl;
 		}
 		if (copy[0] < 0.0)
 		{//negative probabilities are not allowed.
+			std::cout << "negative probabilities are not allowed." << std::endl;
 			return false;
 		}
 		double TotalProb = 0.0;
@@ -424,7 +428,13 @@ namespace DynaPlex
 		{
 			TotalProb += d;
 		}
-		return std::abs(TotalProb - 1.0) < 1e-8;
+		if (std::abs(TotalProb - 1.0) < 1e-8) {
+			return true;
+		}
+		else {
+			std::cout << "sum of probabilities is not 1.0:  " << TotalProb << std::endl;
+			return false;
+		}
 	}
 
 	DiscreteDist DiscreteDist::TakeMaximumWith(int64_t value) const
@@ -762,6 +772,19 @@ namespace DynaPlex
 		return translatedPMF[value - min];
 	}
 
+	double DiscreteDist::CumulativeProbabilityAt(int64_t value) const
+	{
+		if (value < min)
+		{
+			return 0.0;
+		}
+		else if (value > Max())
+		{
+			return 1.0;
+		}
+		return cumulativePMF[value - min];
+	}
+
 	double DiscreteDist::Expectation() const {
 		double expectation = 0.0;
 		for (const auto& [qty, prob] : *this) {
@@ -794,7 +817,19 @@ namespace DynaPlex
 		return std::sqrt(Variance());
 	}
 
+	int64_t DiscreteDist::GetSampleFromCDF(DynaPlex::RNG& rng) const {
 
+		if (!optimizedForSampling)
+			throw DynaPlex::Error("DiscreteDist: In GetSampleFromCDF should first create CDF.");
+		// Generate a uniform random number between 0 and 1
+		double randomValue = rng.genUniform();
+		// Find the first element in the CDF that is greater than randomValue
+		auto it = std::upper_bound(cumulativePMF.begin(), cumulativePMF.end(), randomValue);
+		// Calculate the index by taking the distance from the beginning
+		size_t index = std::distance(cumulativePMF.begin(), it);
+		// Return the sampled value by adding `min` to the index
+		return min + static_cast<int64_t>(index);
+	}
 
 	int64_t DiscreteDist::GetSample(DynaPlex::RNG& rng) const {
 		// Generate a uniform random number between 0 and 1

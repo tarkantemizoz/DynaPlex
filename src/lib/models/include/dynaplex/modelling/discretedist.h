@@ -143,6 +143,7 @@ namespace DynaPlex
 		 * Returns the probability that the rv takes on this specific value.
 		 */
 		double ProbabilityAt(int64_t value) const;
+		double CumulativeProbabilityAt(int64_t value) const;
 		///Returns expectation of the rv. 
 		double Expectation() const;
 		///Returns variance of the rv.
@@ -162,6 +163,7 @@ namespace DynaPlex
 		DiscreteDist(const DynaPlex::VarGroup& vars);
 		/// Returns a sample of the rv, using the rng as random number generator. 
 		int64_t GetSample(DynaPlex::RNG& rng) const;
+		int64_t GetSampleFromCDF(DynaPlex::RNG& rng) const;
 		int64_t GetSampleFromProb(double randomValue) const;
 
 		/// creates an internal data structure that enables samples to be drawn much faster, especially when there are many potential values that this might take on.

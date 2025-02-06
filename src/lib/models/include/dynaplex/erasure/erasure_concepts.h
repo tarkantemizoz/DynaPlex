@@ -37,6 +37,11 @@ namespace DynaPlex::Erasure
 		{ mdp.ModifyStateWithEvent(state, event) } -> std::same_as<double>;
 	};
 
+	template <typename t_MDP, typename t_State>
+	concept HasReturnUsefulStatistics = requires(const t_MDP & mdp, t_State & state) {
+		{ mdp.ReturnUsefulStatistics(state) } -> std::same_as<std::vector<double>>;
+	};
+
 	template <typename t_MDP, typename t_Event, typename t_RNG>
 	concept HasGetEvent = requires(const t_MDP & mdp, t_RNG & rng) {
 		{ mdp.GetEvent(rng) } -> std::same_as<t_Event>;

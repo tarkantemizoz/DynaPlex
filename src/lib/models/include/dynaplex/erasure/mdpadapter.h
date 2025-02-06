@@ -646,7 +646,6 @@ namespace DynaPlex::Erasure
 			return IncorporateUntilSomeAction<true>(trajectories, MaxPeriodCount);
 		}
 
-
 		bool IncorporateEvent(std::span<DynaPlex::Trajectory> trajectories) const override
 		{
 
@@ -730,6 +729,34 @@ namespace DynaPlex::Erasure
 					mdp->ResetHiddenStateVariables(t_state, traj.RNGProvider.GetInitiationRNG());
 				}
 				traj.Category = mdp->GetStateCategory(t_state);
+			}
+		}
+		virtual void InitiateStateVariables(std::span<DynaPlex::Trajectory> trajectories) const override
+		{
+			for (DynaPlex::Trajectory& traj : trajectories)
+			{
+				if constexpr (HasResetHiddenStateVariables<t_MDP, t_State, DynaPlex::RNG>)
+				{
+					auto& t_state = ToState(traj.GetState());
+					mdp->ResetHiddenStateVariables(t_state, traj.RNGProvider.GetInitiationRNG());
+				}
+				else
+				{
+					throw DynaPlex::Error("MDP->InitiateStateVariables: " + mdp_type_id + "\nMDP does not publicly define ResetHiddenStateVariables.");
+				}
+			}
+		}
+
+		std::vector<double> ReturnUsefulStatistics(const DynaPlex::dp_State& dp_state) const override
+		{
+			if constexpr (HasReturnUsefulStatistics<t_MDP, t_State>)
+			{
+				auto& t_state = ToState(dp_state);
+				return mdp->ReturnUsefulStatistics(t_state);
+			}
+			else
+			{
+				throw DynaPlex::Error("MDP->ReturnUsefulStatistics: " + mdp_type_id + "\nMDP does not publicly define ReturnUsefulStatistics(MDP::State&) returning std::vector<double>.");
 			}
 		}
 

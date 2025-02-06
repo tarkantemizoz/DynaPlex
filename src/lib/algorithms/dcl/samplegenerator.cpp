@@ -22,6 +22,7 @@ namespace DynaPlex::DCL {
 
 		config.GetOrDefault("enable_sequential_halving", enable_sequential_halving, true);
 		config.GetOrDefault("silent", silent, false);
+		config.GetOrDefault("InitiateStateVariables", InitiateStateVariables, false);
 		config.GetOrDefault("M", M, 1000);
 		config.GetOrDefault("N", N, 5000);
 		config.GetOrDefault("sampling_probability", sampling_probability, 1.0);
@@ -84,6 +85,8 @@ namespace DynaPlex::DCL {
 						if (trajectory.Category.IsFinal())
 							throw DynaPlex::Error("DCL: GenerateSamplesOnThread - trajectory has Category.IsFinal() but mdp IsInfiniteHorizon(). ");
 				}
+				if (InitiateStateVariables)
+					mdp->InitiateStateVariables({ &trajectory,1 });
 			}
 			bool final_reached = false;
 			while (!final_reached) {

@@ -115,11 +115,12 @@ namespace DynaPlex {
 
 		// Use MDP's GetPromisingActions to determine the promising actions based on the neural network's scores.
 		std::vector<int64_t> vec = mdp->GetPromisingActions(dp_state, std::span<float>(output_scores.data_ptr<float>(), output_dim), num_actions);
+		return vec;
+
 #else
 		throw DynaPlex::Error("NN_Policy: Torch not available - Cannot GetPromisingActions. To make torch available, set dynaplex_enable_pytorch to true and dynaplex_pytorch_path to an appropriate path, e.g. in CMakeUserPresets.txt. ");
 #endif
 
-		return vec;
 	}
 
 }  // namespace DynaPlex
