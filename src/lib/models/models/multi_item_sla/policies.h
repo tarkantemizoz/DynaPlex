@@ -19,6 +19,16 @@ namespace DynaPlex::Models {
 			int64_t GetAction(const MDP::State& state) const;
 		};
 
+		class GreedyDynamicPolicy
+		{
+			std::shared_ptr<const MDP> mdp;
+			const VarGroup varGroup;
+			int64_t serviceLevelPolicy;
+		public:
+			GreedyDynamicPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config);
+			int64_t GetAction(const MDP::State& state) const;
+		};
+
 		class DynamicPolicy
 		{
 			std::shared_ptr<const MDP> mdp;

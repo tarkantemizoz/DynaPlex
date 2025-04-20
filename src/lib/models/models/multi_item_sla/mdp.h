@@ -27,7 +27,6 @@ namespace DynaPlex::Models {
 			int64_t totalActions;
 			std::vector<std::vector<int64_t>> baseStockLevels;
 			std::vector<int64_t> highDemandVariance;
-			//std::vector<std::vector<int64_t>> itemStockLevels;
 
 			struct State {
 				DynaPlex::StateCategory cat;
@@ -50,7 +49,7 @@ namespace DynaPlex::Models {
 				std::vector<bool> AllowedActions;
 				//double HoldingCosts;
 				//double HoldingCostsPerReviewPeriod;
-				//std::vector<int64_t> ActionStats;
+				std::vector<int64_t> policyChange;
 
 				DynaPlex::VarGroup ToVarGroup() const;
 			};
@@ -58,10 +57,6 @@ namespace DynaPlex::Models {
 			using Event = std::vector<int64_t>;
 
 			std::vector<double> ReturnUsefulStatistics(const State&) const;
-			//void DetermineStockLevels(std::vector<int64_t>& stockLevels, double serviceLevel) const;
-			//void DetermineStockLevelsActionSet(std::vector<int64_t>& stockLevels, bool increase) const;
-			//void DetermineStockLevelsContinuous(std::vector<int64_t>& stockLevels, double serviceLevel) const;
-			//std::vector<double> CalculateItemStatistics(int64_t item, int64_t stock_level) const;
 			void ResetHiddenStateVariables(State& state, DynaPlex::RNG&) const;
 			void SetAllowedActions(State& state) const;
 

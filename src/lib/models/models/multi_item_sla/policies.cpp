@@ -16,6 +16,26 @@ namespace DynaPlex::Models {
 			return action;
 		}
 
+		GreedyDynamicPolicy::GreedyDynamicPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config)
+			:mdp{ mdp }
+		{
+			config.GetOrDefault("serviceLevelPolicy", serviceLevelPolicy, mdp->benchmarkAction);
+		}
+
+		int64_t GreedyDynamicPolicy::GetAction(const MDP::State& state) const
+		{
+			int64_t action = serviceLevelPolicy + 1;
+			if (state.TimeRemaining == mdp->leadTimes[0] + 1) {
+				if (state.AggregateFillRate == 1.0) {
+					action--;
+				}
+				if (state.AggregateFillRate < mdp->aggregateTargetFillRate) {
+					action++;
+				}
+			}
+			return action;
+		}
+
 		DynamicPolicy::DynamicPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config)
 			:mdp{ mdp }
 		{

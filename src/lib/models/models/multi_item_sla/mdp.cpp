@@ -49,13 +49,6 @@ namespace DynaPlex::Models {
 				std::vector<int64_t> subset(concatBaseStockLevels.begin() + l * numberOfItems, concatBaseStockLevels.begin() + (l + 1) * numberOfItems);
 				baseStockLevels.push_back(subset);
 			}
-			//std::vector<std::vector<int64_t>> itemLevels(numberOfItems, std::vector<int64_t>(totalActions - 1, 0));
-			//for (size_t action = 0; action < totalActions - 1; ++action) {
-			//	for (size_t item = 0; item < numberOfItems; ++item) {
-			//		itemLevels[item][action] = baseStockLevels[action][item];
-			//	}
-			//}
-			//itemStockLevels = itemLevels;
 		}
 
 		bool MDP::IsAllowedAction(const State& state, int64_t action) const
@@ -131,6 +124,7 @@ namespace DynaPlex::Models {
 			if (action != state.LastPolicy) {
 				state.LastPolicy = action;
 				state.ChangeInPolicy++;
+				state.policyChange[reviewHorizon - state.TimeRemaining]++;
 			}
 
 			state.cat = StateCategory::AwaitEvent();
@@ -185,27 +179,7 @@ namespace DynaPlex::Models {
 					currentState.front() += onHand;
 
 				state.aggregate_vector.insert(state.aggregate_vector.end(), currentState.begin(), currentState.end());
-
-				//bool actionFound = false;
-				//const auto& bs_levels = itemStockLevels[i];
-				//for (int64_t j = 0; j < totalActions - 2; j++) {
-				//	if (invPos < bs_levels[j] && bs_levels[j] < bs_levels[j + 1]) {
-				//		//counts[j]++;
-				//		//actionFound = true;					
-				//		allowedActions[j + 1] = true;
-				//		break;
-				//	}
-				//}
-				//if (invPos < bs_levels[totalActions - 2]) {
-				//	allowedActions[totalActions - 1] = true;
-				//	//if (!actionFound)
-				//	//	counts[totalActions - 2]++;
-				//}
-				//for (auto inv : state.state_vector[i]) {
-				//	state.aggregate_vector.push_back(inv);
-				//}
 			}
-			//state.ActionStats = std::move(counts);
 			//state.HoldingCosts += cost;
 
 			if (state.ObservedDemand > 0)
@@ -243,7 +217,6 @@ namespace DynaPlex::Models {
 		}
 
 		void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
-			//features.Add(state.ActionStats);
 			features.Add(state.aggregate_vector);
 			if (state.TimeRemaining < reviewHorizon) {
 				features.Add(state.AggregateFillRate);
@@ -261,12 +234,30 @@ namespace DynaPlex::Models {
 		std::vector<double> MDP::ReturnUsefulStatistics(const State& state) const
 		{
 			std::vector<double> statistics;
-			statistics.reserve(5);
+			statistics.reserve(8);
 			statistics.push_back(state.AFRPerReviewPeriod);
 			statistics.push_back(state.CSPerReviewPeriod);
 			statistics.push_back(state.CESPerReviewPeriod);
 			statistics.push_back(state.CIPPerReviewPeriod);
 			statistics.push_back(state.SPPerReviewPeriod);
+
+			std::vector<int64_t> polChange(3, 0);
+			int64_t inc = static_cast<int64_t>(floor((double)reviewHorizon / 3.0));
+			for (int64_t i = 0; i < reviewHorizon; i++){
+				if (i < inc)
+					polChange[0] += state.policyChange[i];
+				else if (i < 2 * inc)
+					polChange[1] += state.policyChange[i];
+				else
+					polChange[2] += state.policyChange[i];
+			}
+			int64_t totalChange = polChange[0] + polChange[1] + polChange[2];
+			for (int64_t i = 0; i < 3; i++) {
+				double frac = 0.0;
+				if (totalChange > 0)
+					frac = static_cast<double>(polChange[i]) / totalChange;
+				statistics.push_back(frac);
+			}
 			//statistics.push_back(state.HoldingCosts);
 			return statistics;
 		}
@@ -279,6 +270,7 @@ namespace DynaPlex::Models {
 			state.CumulativeStockouts = 0;
 			state.ChangeInPolicy = 0;
 			state.NumReviewPeriodPassed = 0;
+			state.policyChange.resize(reviewHorizon, 0);
 			//state.HoldingCosts = 0.0;
 		} 
 		
@@ -320,6 +312,8 @@ namespace DynaPlex::Models {
 			state.SPPerReviewPeriod = 0.0;
 			state.AllowedActions.resize(totalActions, false);
 			state.AllowedActions[0] = true;
+			state.policyChange.resize(reviewHorizon, 0);
+
 			//state.HoldingCosts = 0.0;
 			//std::vector<int64_t> counts(totalActions - 1, 0);
 			//state.ActionStats = std::move(counts);
@@ -364,6 +358,8 @@ namespace DynaPlex::Models {
 				"Base-stock policy with parameter base_stock_level for all SKUs.");
 			registry.Register<DynamicPolicy>("dynamic",
 				"Dynamic base-stock policy for all SKUs.");
+			registry.Register<GreedyDynamicPolicy>("greedy_dynamic",
+				"Dynamic base-stock policy for all SKUs.");
 		}
 		
 		void Register(DynaPlex::Registry& registry)
@@ -375,299 +371,3 @@ namespace DynaPlex::Models {
 		}
 	}
 }
-
-//void StockOutCalculation{
-//				for (int64_t l = 0; l < baseStockLevels.size(); l++)
-//	{
-//		double aggFillRate = 0.0;
-//		double expHoldingCost = 0.0;
-//		stockLevels = baseStockLevels[l];
-//		//DynaPlex::DiscreteDist totalStockoutDist = DiscreteDist::GetZeroDist();
-//		//DynaPlex::DiscreteDist totalStockoutOverHorizonDist = DiscreteDist::GetZeroDist();
-//		//std::vector<std::vector<double>> totalDemandStockoutProbs(1);
-//		//totalDemandStockoutProbs[0].push_back(1.0);
-
-//		for (int64_t i = 0; i < numberOfItems; i++)
-//		{
-//			//const int64_t maxDemand = demand_distributions[i].Max();
-//			//const int64_t maxLeadTimeDemand = demand_distributions_over_leadtime[i].Max();
-//			const int64_t stockLevel = stockLevels[i];
-
-//			//std::vector<double> stockoutProbs(maxDemand + 1, 0.0);
-//			//std::vector<std::vector<double>> demandStockoutProbs(maxDemand + 1);
-//			//for (int64_t r = 0; r <= maxDemand; r++) {
-//			//	demandStockoutProbs[r].resize(maxDemand - r + 1, 0.0);
-//			//}
-
-//			std::vector<double> stats = CalculateItemStatistics(i, stockLevel);
-//			aggFillRate += stats[0];
-//			expHoldingCost += stats[4] * holdingCosts[i];
-//			//for (int64_t j = 0; j <= stockLevel; j++) {
-//			//	double leadTimeDemandProb = demand_distributions_over_leadtime[i].ProbabilityAt(j);
-//			//	const int64_t bound = std::min<int64_t>(stockLevel - j, maxDemand);
-//			//	for (int64_t k = 0; k <= bound; k++) {
-//			//		stockoutProbs[0] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//		demandStockoutProbs[0][k] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//	}
-//			//	for (int64_t k = stockLevel - j + 1; k <= maxDemand; k++) {
-//			//		stockoutProbs[k - stockLevel + j] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//		demandStockoutProbs[k - stockLevel + j][stockLevel - j] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//	}
-//			//}
-//			//for (int64_t j = stockLevel + 1; j <= maxLeadTimeDemand; j++) {
-//			//	double leadTimeDemandProb = demand_distributions_over_leadtime[i].ProbabilityAt(j);
-//			//	for (int64_t k = 0; k <= maxDemand; k++) {
-//			//		stockoutProbs[k] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//		demandStockoutProbs[k][0] += leadTimeDemandProb * demand_distributions[i].ProbabilityAt(k);
-//			//	}
-//			//}
-//			//DynaPlex::DiscreteDist StockoutDist = DiscreteDist::GetCustomDist(stockoutProbs, 0);
-//			//DynaPlex::DiscreteDist StockoutDistOverHorizon = DiscreteDist::GetZeroDist();
-//			//for (int64_t j = 0; j < reviewHorizon; j++) {
-//			//	StockoutDistOverHorizon = StockoutDistOverHorizon.Add(StockoutDist);
-//			//}
-//			//totalStockoutDist = totalStockoutDist.Add(StockoutDist);
-//			//totalStockoutOverHorizonDist = totalStockoutOverHorizonDist.Add(StockoutDistOverHorizon);
-
-//			//std::vector<std::vector<double>> oldTotal = std::move(totalDemandStockoutProbs);
-//			//const int64_t oldRows = (int64_t)oldTotal.size();        
-//			//const int64_t newRows = (int64_t)demandStockoutProbs.size();
-//			//const int64_t resultMaxRow = oldRows + newRows - 2; 
-//			//std::vector<std::vector<double>> newTotalDemandStockoutProbs(resultMaxRow + 1);
-//			//for (int64_t r = 0; r <= resultMaxRow; r++) {
-//			//	newTotalDemandStockoutProbs[r].resize(resultMaxRow - r + 1, 0.0);
-//			//}
-
-//			//for (int64_t r1 = 0; r1 < oldRows; r1++) {
-//			//	for (int64_t c1 = 0; c1 < (int64_t)oldTotal[r1].size(); c1++) {
-//			//		double val1 = oldTotal[r1][c1];
-//			//		if (val1 == 0.0) 
-//			//			continue;
-//			//		for (int64_t r2 = 0; r2 < newRows; r2++) {
-//			//			for (int64_t c2 = 0; c2 < (int64_t)demandStockoutProbs[r2].size(); c2++)
-//			//				newTotalDemandStockoutProbs[r1 + r2][c1 + c2] += val1 * demandStockoutProbs[r2][c2];
-//			//		}
-//			//	}
-//			//}
-//			//totalDemandStockoutProbs = std::move(newTotalDemandStockoutProbs);
-//		}
-
-//		//double expExceededStockout = 0.0;
-//		//const int64_t maxStockOut = totalDemandStockoutProbs.size() - 1;
-//		//for (int64_t s = 0; s <= maxStockOut; s++) {
-//		//	const std::vector<double> stockoutVec = totalDemandStockoutProbs[s];
-//		//	const int64_t demand = stockoutVec.size() - 1;
-//		//	for (int64_t d = 0; d <= demand; d++) {
-//		//		const int64_t shouldSatisfy = static_cast<int64_t>(std::ceil(aggregateTargetFillRate * (d + s)));
-//		//		const int64_t allowableStockouts = (d + s) - shouldSatisfy;
-//		//		if (s > allowableStockouts) {
-//		//			expExceededStockout += (s - allowableStockouts) * totalDemandStockoutProbs[s][d];
-//		//		}
-//		//	}
-//		//}
-
-//		double expStockouts = (1.0 - aggFillRate / totalDemandRate) * totalDemandRate;
-//		serviceLevels.push_back(aggFillRate / totalDemandRate);
-//		expectedPolicyHoldingCosts.push_back(expHoldingCost);
-//		if (l == 9)
-//			unavoidableCostPerPeriod = expHoldingCost;
-
-//		//double expectedPenaltyCost = expExceededStockout * penaltyCost;
-//		//double expectedTotalCost = expHoldingCost + expectedPenaltyCost;
-//		std::cout << "Fr: " << serviceLevels[l];
-//		for (int64_t stock : stockLevels) {
-//			std::cout << "  " << stock;
-//		}
-//		std::cout << "  " << " holding costs:  " << expHoldingCost << " stockouts:  " << expStockouts * reviewHorizon << std::endl;
-
-//		//std::cout << "  " << " holding costs:  " << expHoldingCost << " stockouts:  " << expStockouts * reviewHorizon << "  " << expExceededStockout;
-//		//std::cout << " penalty cost:  " << expectedPenaltyCost << " total cost:  " << expectedTotalCost << std::endl;
-//	}
-//}
-
-//void MDP::DetermineStockLevelsActionSet(std::vector<int64_t>& stockLevels, bool increase) const
-//{
-//	std::vector<double> changeFR(numberOfItems, 0.0);
-//	std::vector<double> changeH(numberOfItems, 0.0);
-//	std::vector<double> changeFRV(numberOfItems, 0.0);
-//	for (size_t i = 0; i < numberOfItems; i++)
-//	{
-//		int64_t stock_level = increase ? stockLevels[i] : (stockLevels[i] - 1);
-//		std::vector<double> statistics = CalculateItemStatistics(i, stock_level);
-//		changeFR[i] = statistics[1];
-//		changeH[i] = statistics[2];
-//		changeFRV[i] = statistics[3];
-//	}
-//	double neg_limit = -std::numeric_limits<double>::infinity();
-//	double pos_limit = std::numeric_limits<double>::infinity();
-//	int64_t bestRatioSKU = 0;
-//	for (size_t i = 0; i < numberOfItems; i++)
-//	{
-//		double ratio = changeFR[i] / (changeH[i] * holdingCosts[i]);
-//		if (increase) {
-//			if (ratio > neg_limit) {
-//				bestRatioSKU = i;
-//				neg_limit = ratio;
-//			}
-
-//		}
-//		else {
-//			if (ratio < pos_limit) {
-//				bestRatioSKU = i;
-//				pos_limit = ratio;
-//			}
-//		}
-//	}
-//	if (increase)
-//		stockLevels[bestRatioSKU]++;
-//	else
-//		stockLevels[bestRatioSKU]--;
-//}
-
-//if (emergencyShipments) {
-//	double rate = demandRates[i] * leadTimes[i];
-//	double mult = 1.0;
-//	for (int64_t j = 1; j <= stockLevels[i]; ++j) {
-//		mult = (rate * mult) / (j + rate * mult);
-//	}
-//	aggFillRate += (1 - mult) * demandRates[i];
-//}
-
-//void MDP::DetermineStockLevels(std::vector<int64_t>& stockLevels, double serviceLevel) const
-//{
-//	double aggFillRate = 0.0;
-//	std::vector<double> changeFR(numberOfItems, 0.0);
-//	std::vector<double> changeH(numberOfItems, 0.0);
-//	for (size_t i = 0; i < numberOfItems; i++)
-//	{
-//		if (emergencyShipments) {
-//			double expFulfilled = 0.0;
-//			double rate = demandRates[i] * leadTimes[i];
-//			double mult = 1.0;
-//			for (int64_t j = 1; j <= stockLevels[i]; ++j) {
-//				mult = (rate * mult) / (j + rate * mult);
-//			}
-//			double fulFilled = (1 - mult) * demandRates[i];
-//			expFulfilled += fulFilled;
-//			mult = (rate * mult) / ((stockLevels[i] + 1) + rate * mult);
-//			double newFulFilled = (1 - mult) * demandRates[i];
-//			changeFR[i] = newFulFilled - fulFilled;
-//			changeH[i] = 1.0;
-//			aggFillRate += expFulfilled;
-//		}
-//		else {
-//			std::vector<double> statistics = CalculateItemStatistics(i, stockLevels[i]);
-//			aggFillRate += statistics[0];
-//			changeFR[i] = statistics[1];
-//			changeH[i] = statistics[2];
-//		}
-//	}
-//	if (aggFillRate / totalDemandRate < serviceLevel)
-//	{
-//		double limit = -std::numeric_limits<double>::infinity();
-//		int64_t bestRatioSKU{ 0 };
-//		for (size_t i = 0; i < numberOfItems; i++)
-//		{
-//			double ratio = changeFR[i] / (changeH[i] * holdingCosts[i]);
-//			if (ratio > limit)
-//			{
-//				bestRatioSKU = i;
-//				limit = ratio;
-//			}				
-//		}
-//		stockLevels[bestRatioSKU]++;
-//		DetermineStockLevels(stockLevels, serviceLevel);
-//	}
-//}
-
-//void MDP::DetermineStockLevelsContinuous(std::vector<int64_t>& stockLevels, double serviceLevel) const //book
-//{
-//	double aggFillRate{ 0.0 };
-//	std::vector<double> probSums(numberOfItems, 0.0);
-//	for (size_t i = 0; i < numberOfItems; i++)
-//	{
-//		for (size_t j = 0; j < stockLevels[i]; j++)
-//		{
-//			probSums[i] += demand_distributions_over_leadtime[i].ProbabilityAt(j);
-//		}
-//		aggFillRate += probSums[i] * demandRates[i] / totalDemandRate;
-//	}
-//	if (aggFillRate < serviceLevel)
-//	{
-//		double limit = -std::numeric_limits<double>::infinity();
-//		int64_t bestRatioSKU{ 0 };
-//		for (size_t i = 0; i < numberOfItems; i++)
-//		{
-//			double prob = demand_distributions_over_leadtime[i].ProbabilityAt(stockLevels[i]);
-//			double ratio = (demandRates[i] / totalDemandRate) * prob / (holdingCosts[i] * (probSums[i] + prob));
-//			if (ratio > limit)
-//			{
-//				bestRatioSKU = i;
-//				limit = ratio;
-//			}
-//		}
-//		stockLevels[bestRatioSKU]++;
-//		DetermineStockLevels(stockLevels, serviceLevel);
-//	}
-//}
-//std::vector<double> MDP::CalculateItemStatistics(int64_t item, int64_t stock_level) const
-//{
-//	std::vector<double> statistics(4, 0.0);
-//	// expected fill rate, expected fill rate change, expected on hand inventory change, expected on hand inventory, variance of fill rate change
-//	//double expFulfilledNewS = 0.0;
-//	//double varDiff = 0.0;
-//	for (int64_t j = stock_level; j >= 0; j--) {
-//		double leadTimeDemandProb = demand_distributions_over_leadtime[item].ProbabilityAt(j);
-//		double probSums = 0.0;
-//		for (int64_t k = 0; k <= stock_level - j; k++) {
-//			double prob = demand_distributions[item].ProbabilityAt(k);
-//			probSums += prob;
-//			statistics[0] += leadTimeDemandProb * prob * k;
-//			//expFulfilledNewS += leadTimeDemandProb * prob * k;
-//			statistics[3] += leadTimeDemandProb * prob * (stock_level - j - k);
-//		}
-//		double factor = leadTimeDemandProb * (1.0 - probSums);
-//		statistics[0] += factor * (stock_level - j);
-//		statistics[1] += factor;
-//		statistics[2] += leadTimeDemandProb * probSums;
-//		//expFulfilledNewS += factor * (stock_level - j + 1);
-//		//varDiff += factor * (2.0 * stock_level - 2.0 * j + 1);
-//	}
-//	//statistics[4] = varDiff - expFulfilledNewS * expFulfilledNewS + statistics[0] * statistics[0];
-//	return statistics;
-//}
-//
-//void MDP::DetermineStockLevels(std::vector<int64_t>& stockLevels, double serviceLevel) const
-//{
-//	double aggFillRate = 0.0;
-//	std::vector<double> changeFR(numberOfItems, 0.0);
-//	//std::vector<double> changeFRV(numberOfItems, 0.0);
-//	std::vector<double> changeH(numberOfItems, 0.0);
-//	for (size_t i = 0; i < numberOfItems; i++)
-//	{
-//		std::vector<double> statistics = CalculateItemStatistics(i, stockLevels[i]);
-//		aggFillRate += statistics[0];
-//		changeFR[i] = statistics[1];
-//		changeH[i] = statistics[2];
-//		//changeFRV[i] = statistics[4];
-//	}
-//	if (aggFillRate / totalDemandRate < serviceLevel)
-//	{
-//		double limit = -std::numeric_limits<double>::infinity();
-//		int64_t bestRatioSKU{ 0 };
-//		for (size_t i = 0; i < numberOfItems; i++)
-//		{
-//			//double ratio = (changeFR[i] + meanVarRatio * std::max(0.0, changeFRV[i])) / (changeH[i] * holdingCosts[i]);
-//			double ratio = changeFR[i] / (changeH[i] * holdingCosts[i]);
-//			//std::cout << "ratio:  " << i << "  " << changeFR[i] << "   " << changeFRV[i] << "  " << (changeH[i] * holdingCosts[i]) << "  " << ratio << std::endl;
-//			if (ratio > limit)
-//			{
-//				bestRatioSKU = i;
-//				limit = ratio;
-//			}
-//		}
-//		//std::cout << "Best: " << bestRatioSKU << "  fr:  " << aggFillRate / totalDemandRate << std::endl;
-//		stockLevels[bestRatioSKU]++;
-//		DetermineStockLevels(stockLevels, serviceLevel);
-//	}
-//}
