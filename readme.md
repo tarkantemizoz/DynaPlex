@@ -5,6 +5,7 @@ This repository replicates the results presented in the papers:
 - *[Zero-shot Generalization in Inventory Management: Train, then Estimate and Decide](https://arxiv.org/abs/2411.00515)*
 
 For the original repository, including the latest updates and documentation, please visit [DynaPlex on GitHub](https://github.com/DynaPlex/DynaPlex).
+Please do not hesitate to contact the first author when replicating the results or if you have any questions.
 
 For the paper titled "Deep Controlled Learning for Inventory Control", please see folder **`DeepControlledLearning/`** for the weights of the neural networks for each inventory setting, and  **`src/lib/models/models/`** folder for the construction of MDP-EI's of the inventory problems.
 ---
