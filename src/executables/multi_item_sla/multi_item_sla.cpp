@@ -1048,7 +1048,7 @@ static void BaseStockPolicyTestsRemaining()
 int main() {
 	//BaseStockPolicyTests();
 	//BaseStockPolicyTestsRemaining();
-	ExtensiveTests();
+	//ExtensiveTests();
 
 	return 0;
 }
