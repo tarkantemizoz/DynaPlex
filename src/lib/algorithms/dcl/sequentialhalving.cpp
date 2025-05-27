@@ -209,6 +209,7 @@ namespace DynaPlex::DCL {
 				sample.sample_number = seed;
 				sample.action_label = traj.NextAction;
 				sample.cost_improvement.reserve(root_actions.size());
+				sample.probabilities.reserve(root_actions.size());
 				sample.simulated_actions.reserve(root_actions.size());
 				sample.q_hat = best_reward * objective;
 
@@ -222,12 +223,13 @@ namespace DynaPlex::DCL {
 				}
 
 				DynaPlex::PolicyComparison comp(std::move(trajectory_costs));
-				bool ValueBasedProbability = true;
 				int64_t least_action_budget = floor(total_budget / (root_actions.size() * ceil(log(root_actions.size()) / log(static_cast<double>(2)))));
 				if (least_action_budget > 1) {
 					comp.ComputeZstatistics(best_action_id);
+					comp.ComputeProbabilities(true);
 				}
 				else {
+					comp.ComputeProbabilities(false);
 					sample.z_stat = 0.0;
 				}
 
@@ -235,6 +237,7 @@ namespace DynaPlex::DCL {
 				for (int64_t action_id = 0; action_id < root_actions.size(); action_id++) {
 					sample.cost_improvement.push_back(comp.mean(action_id, prescribed_action_initial_policy, true) * objective);
 					sample.simulated_actions.push_back(root_actions[action_id]);
+					sample.probabilities.push_back(comp.GetProbability(action_id));
 					if (action_id != best_action_id && least_action_budget > 1)
 					{
 						double zValue = comp.GetZstatistic(action_id);

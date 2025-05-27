@@ -31,6 +31,12 @@ private:
 	int64_t reviewHorizon;
 	int64_t seed;
 
+	double p_min;
+	double p_max;
+	std::vector<int64_t> lowerBoundPolicy;
+	std::vector<int64_t> upperBoundPolicy;
+	bool upperBoundPolicyFound = false;
+
 	std::vector<double> holdingCosts;
 	std::vector<int64_t> leadTimes;
 	std::vector<double> demandRates;
@@ -39,10 +45,16 @@ private:
 	double totalDemandRate;
 	std::vector<DiscreteDist> demand_distributions;
 	std::vector<DiscreteDist> demand_distributions_over_leadtime;
+
 	std::vector<std::vector<int64_t>> baseStockLevels;
+	std::vector<int64_t> concatBaseStockLevels;
+	std::vector<int64_t> newConcatBaseStockLevels;
+	int64_t newtotalActions;
 
 	std::vector<double> expectedPolicyHoldingCosts;
+	std::vector<double> newExpectedPolicyHoldingCosts;
 	std::vector<double> expectedPolicyFillRates;
+	std::vector<double> newExpectedPolicyFillRates;
 
 public:
 
@@ -56,10 +68,14 @@ public:
 		class_config.Get("demand_rate_limit", demand_rate_limit);
 		class_config.Get("high_variance_ratio", high_variance_ratio);
 		class_config.Get("cost_limit", cost_limit);
-		class_config.GetOrDefault("seed", seed, 10061994 + 4081965);
+		class_config.Get("cost_limit", p_min);
+		class_config.GetOrDefault("p_max", p_max, 1000000.0);
+		class_config.GetOrDefault("seed", seed, 10061994 + 4081965); //lucky birthdays
 
 		DynaPlex::RNG rng(true, seed);
 
+		lowerBoundPolicy.resize(numberOfItems, 0);
+		upperBoundPolicy.resize(numberOfItems, 0);
 		if (aggregateTargetFillRate >= 1.0 || aggregateTargetFillRate < 0.0)
 			throw DynaPlex::Error("InitialMDPProcessing: aggregateTargetFillRate should be between 0 and 1.");
 
@@ -112,9 +128,8 @@ public:
 		class_config.Set("highDemandVariance", highDemandVariance);
 		class_config.Set("totalDemandRate", totalDemandRate);
 
-		const int64_t numberOfPossibleSlaTargets = 9; // do not change this 
-		const double incrementalFillRate = 0.005; // do not change this 
-		std::vector<int64_t> concatBaseStockLevels;
+		const int64_t numberOfPossibleSlaTargets = 9; // do not change this =  a
+		const double incrementalFillRate = 0.005; // do not change this = b
 		for (int64_t l = -numberOfPossibleSlaTargets; l <= numberOfPossibleSlaTargets; l++)
 		{
 			bool newPolicyFound = false;
@@ -155,17 +170,13 @@ public:
 				class_config.Set("benchmarkAction", benchmarkAction);
 			}
 
-			if (dp.System().WorldRank() == 0)
-			{
-				dp.System() << "Fr: " << expectedFillRate;
-				dp.System() << "  St/o: " << expectedStockouts;
-				dp.System() << "  holding costs:  " << expectedPolicyHoldingCosts[l] << "       ";
-				for (int64_t stock : stockLevels) {
-					dp.System() << "  " << stock;
-				}
-
-				dp.System() << std::endl;
+			dp.System() << "Fr: " << expectedFillRate;
+			dp.System() << "  St/o: " << expectedStockouts;
+			dp.System() << "  holding costs:  " << expectedPolicyHoldingCosts[l] << "       ";
+			for (int64_t stock : stockLevels) {
+				dp.System() << "  " << stock;
 			}
+			dp.System() << std::endl;
 		}
 	}
 
@@ -223,16 +234,215 @@ public:
 		}
 	}
 
-	void TestPerformance(VarGroup& test_config, int64_t reviewHorizonLength, double penalty = 0.0, bool recordBestPolicy = false)
+	void FindBestStaticPolicy (VarGroup& test_config, int64_t reviewHorizonLength, double penalty) {
+		auto& dp = DynaPlexProvider::Get();
+
+		SetBenchmarkActionForPolicy(penalty);
+		double best_static_afr = newExpectedPolicyFillRates[benchmarkAction];
+		double max_target = newExpectedPolicyFillRates[benchmarkAction];
+		int64_t best_static = benchmarkAction;
+		if (benchmarkAction > 0 && benchmarkAction < totalActions - 1) {
+			std::vector<int64_t> lower_subset(newConcatBaseStockLevels.begin() + (benchmarkAction - 1) * numberOfItems, newConcatBaseStockLevels.begin() + benchmarkAction * numberOfItems);
+			lowerBoundPolicy = lower_subset;
+			max_target = newExpectedPolicyFillRates[benchmarkAction + 1];
+		}
+		else {
+			throw DynaPlex::Error("Search not yet implemented for benchmarkAction = 0 and benchmarkAction = totalActions - 1.");
+		}
+		
+		std::vector<double> changeFR(numberOfItems, 0.0);
+		std::vector<double> changeH(numberOfItems, 0.0);
+		double aggFillRate = 0.0;
+		int64_t num_candidate_policies = 0;
+		std::vector<int64_t> concatBSLevels;
+		std::vector<int64_t> newConcatBSLevels = newConcatBaseStockLevels;
+		while (true) {
+			for (size_t i = 0; i < numberOfItems; i++)
+			{
+				const std::vector<double> statistics = CalculateItemStatistics(i, lowerBoundPolicy[i]);
+				aggFillRate += statistics[0];
+				changeFR[i] = statistics[1];
+				changeH[i] = statistics[2];
+			}
+			if (aggFillRate / totalDemandRate < max_target)
+			{
+				double limit = -std::numeric_limits<double>::infinity();
+				int64_t bestRatioSKU = 0;
+				for (size_t i = 0; i < numberOfItems; i++) {
+					double ratio = changeFR[i] / (changeH[i] * holdingCosts[i]);
+					if (ratio > limit) {
+						bestRatioSKU = i;
+						limit = ratio;
+					}
+				}
+				lowerBoundPolicy[bestRatioSKU]++;
+				for (int64_t bs_level : lowerBoundPolicy)
+					concatBSLevels.push_back(bs_level);
+				num_candidate_policies++;
+				aggFillRate = 0.0;
+			}
+			else 
+				break;
+		}
+
+		class_config.Set("concatBaseStockLevels", concatBSLevels);
+		class_config.Set("totalActions", num_candidate_policies);
+		TestPerformance(test_config, reviewHorizonLength, penalty, true);
+		std::vector<int64_t> best_bs_levels(concatBSLevels.begin() + benchmarkAction * numberOfItems, concatBSLevels.begin() + (benchmarkAction + 1) * numberOfItems);
+		aggFillRate = 0.0;
+		for (size_t i = 0; i < numberOfItems; i++)
+			aggFillRate += CalculateItemStatistics(i, best_bs_levels[i])[0];
+
+		if (aggFillRate / totalDemandRate != best_static_afr) {
+			dp.System() << "Best static policy AFR: " << aggFillRate / totalDemandRate << std::endl;
+			if (aggFillRate / totalDemandRate < best_static_afr)
+				benchmarkAction = best_static;
+			else if (aggFillRate / totalDemandRate > best_static_afr)
+				benchmarkAction = best_static + 1;
+
+			newConcatBSLevels.insert(newConcatBSLevels.begin() + benchmarkAction * numberOfItems, best_bs_levels.begin(), best_bs_levels.end());
+			class_config.Set("concatBaseStockLevels", newConcatBSLevels);
+			class_config.Set("totalActions", newtotalActions + 1);
+			class_config.Set("benchmarkAction", benchmarkAction);
+		}
+	}
+
+	void SetGenerator(VarGroup& test_config, int64_t reviewHorizonLength)
+	{
+		reviewHorizon = reviewHorizonLength;
+		class_config.Set("reviewHorizon", reviewHorizon);
+		class_config.Set("penaltyCost", 0.0);
+		class_config.Set("concatBaseStockLevels", concatBaseStockLevels);
+		class_config.Set("totalActions", totalActions);
+
+		auto& dp = DynaPlexProvider::Get();
+		DynaPlex::VarGroup policy_config;
+		policy_config.Add("id", "base_stock");
+		std::vector<double> empricalPolicyFillRates;
+		std::vector<double> empricalPolicyExceededStockouts;
+		for (int64_t l = 0; l < totalActions; l++)
+		{
+			class_config.Set("benchmarkAction", l);
+			DynaPlex::MDP mdp = dp.GetMDP(class_config);
+			auto comparer = dp.GetPolicyComparer(mdp, test_config);
+			policy_config.Set("serviceLevelPolicy", l);
+			auto policy = mdp->GetPolicy(policy_config);
+			auto comparison = comparer.Assess(policy);
+			double empricalFillRate;
+			comparison.Get("mean_stat_1", empricalFillRate);
+			empricalPolicyFillRates.push_back(empricalFillRate);
+			double empricalExceededStockouts;
+			comparison.Get("mean_stat_3", empricalExceededStockouts);
+			empricalPolicyExceededStockouts.push_back(empricalExceededStockouts);
+		}
+
+		newConcatBaseStockLevels.clear();
+		newExpectedPolicyFillRates.clear();
+		newExpectedPolicyHoldingCosts.clear();
+		penaltyCostsTreshold.clear();
+		possiblePenaltyCosts.clear();
+		targetPolicies.clear();
+		targetPenaltyCosts.clear();
+		possibleVariedPenaltyCosts.clear();
+		targetVariedPenaltyCosts.clear();
+		double shortfall_amount = totalDemandRate * reviewHorizon;
+		double holding_cost = 0.0;
+		double p_lower_treshold = p_min;
+		bool targetPolicyFound_emp = false;
+		int64_t num_policies = 0;
+		for (int64_t l = 0; l < totalActions; l++)
+		{
+			double delta_0 = (empricalPolicyExceededStockouts[l] - shortfall_amount) / (reviewHorizon * (expectedPolicyHoldingCosts[l] - holding_cost));
+			double delta_1 = 0.0;
+			if (l < totalActions - 1)
+				delta_1 = (empricalPolicyExceededStockouts[l + 1] - empricalPolicyExceededStockouts[l]) / (reviewHorizon * (expectedPolicyHoldingCosts[l + 1] - expectedPolicyHoldingCosts[l]));
+
+			if (delta_0 <= delta_1) {
+				shortfall_amount = empricalPolicyExceededStockouts[l];
+				holding_cost = expectedPolicyHoldingCosts[l];
+				double penalty_treshold = p_max;
+				if (l < totalActions - 1)
+					penalty_treshold = -1 / delta_1;
+
+				std::vector<int64_t> stockLevels = baseStockLevels[l];
+				if (p_min <= penalty_treshold) {
+					if (penalty_treshold >= p_max) {
+						penalty_treshold = p_max;
+					}
+
+					for (int64_t bs_level : stockLevels)
+						newConcatBaseStockLevels.push_back(bs_level);
+
+					if (!targetPolicyFound_emp && empricalPolicyFillRates[l] > aggregateTargetFillRate) {
+						targetPolicyFound_emp = true;
+						greedyAction = l;
+						benchmarkAction = l;
+					}
+
+					newExpectedPolicyFillRates.push_back(expectedPolicyFillRates[l]);
+					newExpectedPolicyHoldingCosts.push_back(expectedPolicyHoldingCosts[l]);
+
+					double diff = penalty_treshold - p_lower_treshold;
+					double penalty = 0.5 * diff + p_lower_treshold;
+
+					std::vector<double> variedPenaltyCosts(3, 0.0);
+					variedPenaltyCosts[0] = 0.25 * diff + p_lower_treshold;
+					variedPenaltyCosts[1] = penalty;
+					variedPenaltyCosts[2] = 0.75 * diff + p_lower_treshold;
+
+					penaltyCostsTreshold.push_back(penalty_treshold);
+					possiblePenaltyCosts.push_back(penalty);
+					possibleVariedPenaltyCosts.push_back(variedPenaltyCosts);
+					p_lower_treshold = penalty_treshold;
+					num_policies++;
+
+					if (penalty_treshold == p_max && l < totalActions - 1) {
+						upperBoundPolicy = baseStockLevels[l + 1];
+						dp.System() << "Policy: " << l + 1 << " not added - penalty_treshold > p_max" << std::endl;
+						break;
+					}
+				}
+				else if (penalty_treshold < p_min) {
+					lowerBoundPolicy = stockLevels;
+					dp.System() << "Policy: " << l << " not added - penalty_treshold < p_min" << std::endl;
+				}
+			}
+			else {
+				dp.System() << "Policy: " << l << " not added - delta_0 > delta_1" << std::endl;
+			}
+		}
+
+		newtotalActions = num_policies;
+		class_config.Set("concatBaseStockLevels", newConcatBaseStockLevels);
+		class_config.Set("totalActions", newtotalActions);
+		class_config.Set("benchmarkAction", benchmarkAction);
+		penaltyCost = possiblePenaltyCosts[benchmarkAction];
+		class_config.Set("penaltyCost", penaltyCost);
+		targetPolicies.push_back(benchmarkAction);
+		targetPenaltyCosts.push_back(penaltyCost);
+		targetVariedPenaltyCosts.push_back(possibleVariedPenaltyCosts[benchmarkAction]);
+		int64_t policyIncrement = 2;
+		for (int64_t i = 1; i <= 3; i++) {
+			const int64_t policy = benchmarkAction + i * policyIncrement;
+			if (policy < newtotalActions - 1) {
+				targetPolicies.push_back(policy);
+				targetPenaltyCosts.push_back(possiblePenaltyCosts[policy]);
+				targetVariedPenaltyCosts.push_back(possibleVariedPenaltyCosts[policy]);
+			}
+		}
+		PrintImportantMDPParameters(false);
+	}
+
+	void TestPerformance(VarGroup& test_config, int64_t reviewHorizonLength, double penalty, bool recordBestPolicy = false)
 	{
 		reviewHorizon = reviewHorizonLength;
 		class_config.Set("reviewHorizon", reviewHorizon);
 		penaltyCost = penalty;
 		class_config.Set("penaltyCost", penaltyCost);
+		int64_t num_actions;
+		class_config.Get("totalActions", num_actions);
 
 		auto& dp = DynaPlexProvider::Get();
-		bool targetPolicyFound_emp = false;
-		std::vector<double> empricalPolicyExceededStockouts;
 		double best_cost = std::numeric_limits<double>::infinity();
 		double bestPolicy_exceedingStockout = 0.0;
 		double bestPolicy_accuracy = 0.0;
@@ -240,13 +450,11 @@ public:
 		
 		DynaPlex::VarGroup policy_config;
 		policy_config.Add("id", "base_stock");
-		for (int64_t l = 0; l < totalActions; l++) 
+		for (int64_t l = 0; l < num_actions; l++)
 		{ 
 			class_config.Set("benchmarkAction", l);
 			DynaPlex::MDP mdp = dp.GetMDP(class_config);
 			auto comparer = dp.GetPolicyComparer(mdp, test_config);
-
-			// test emprical performance
 			policy_config.Set("serviceLevelPolicy", l);
 			auto policy = mdp->GetPolicy(policy_config);
 			auto comparison = comparer.Assess(policy);
@@ -258,43 +466,28 @@ public:
 			comparison.Get("mean_stat_2", empricalStockOuts);
 			double empricalExceededStockouts;
 			comparison.Get("mean_stat_3", empricalExceededStockouts);
-			empricalPolicyExceededStockouts.push_back(empricalExceededStockouts);
 			double targetAccuracy;
 			comparison.Get("mean_stat_5", targetAccuracy);
 
-			if (penaltyCost > 0.0) {
-				if (cost < best_cost) {
-					benchmarkAction = l;
-					best_cost = cost;
-					bestPolicy_exceedingStockout = empricalExceededStockouts;
-					bestPolicy_accuracy = targetAccuracy;
-					bestPolicy_fillRate = empricalFillRate;
-				}
-
-				if (!recordBestPolicy) {
-					dp.System() << l;
-					dp.System() << "  Fr: " << empricalFillRate;
-					dp.System() << "  St/o: " << empricalStockOuts << " exceeded: " << empricalExceededStockouts << "  " << empricalExceededStockouts / reviewHorizon;
-					dp.System() << "  accuracy: " << targetAccuracy;
-					dp.System() << "          cost: " << cost;
-					dp.System() << std::endl;
-				}
+			if (cost < best_cost) {
+				benchmarkAction = l;
+				best_cost = cost;
+				bestPolicy_exceedingStockout = empricalExceededStockouts;
+				bestPolicy_accuracy = targetAccuracy;
+				bestPolicy_fillRate = empricalFillRate;
 			}
 
-			if (!targetPolicyFound_emp && empricalFillRate > aggregateTargetFillRate) {
-				targetPolicyFound_emp = true;
-				greedyAction = l;
-				if (penaltyCost == 0.0) {
-					benchmarkAction = l;
-					if (expectedPolicyFillRates[l] < aggregateTargetFillRate) {
-						optimalLowerStockings = true;
-						if (dp.System().WorldRank() == 0)
-							dp.System() << "Target stocking levels have changed!" << std::endl;
-					}
-				}
+			if (!recordBestPolicy) {
+				dp.System() << l;
+				dp.System() << "  Fr: " << empricalFillRate;
+				dp.System() << "  St/o: " << empricalStockOuts << " exceeded: " << empricalExceededStockouts << "  " << empricalExceededStockouts / reviewHorizon;
+				dp.System() << "  accuracy: " << targetAccuracy;
+				dp.System() << "          cost: " << cost;
+				dp.System() << std::endl;
 			}
 		}
-		if (recordBestPolicy && penaltyCost > 0.0) {
+
+		if (recordBestPolicy) {
 			dp.System() << "Cost: " << best_cost;
 			dp.System() << "   fill rate: " << bestPolicy_fillRate << "  exceeded: " << bestPolicy_exceedingStockout / reviewHorizon;
 			dp.System() << "   accuracy: " << bestPolicy_accuracy;
@@ -302,67 +495,7 @@ public:
 			dp.System() << std::endl;
 		}
 		class_config.Set("benchmarkAction", benchmarkAction);
-
-		if (penaltyCost == 0.0) {
-			penaltyCostsTreshold.clear();
-			possiblePenaltyCosts.clear();
-			targetPolicies.clear();
-			targetPenaltyCosts.clear();
-			possibleVariedPenaltyCosts.clear();
-			targetVariedPenaltyCosts.clear();
-			for (int64_t i = 0; i < totalActions - 1; i++) {
-				double penaltyCost = 0.0;
-				std::vector<double> variedPenaltyCosts(3, 0.0);
-				if (empricalPolicyExceededStockouts[i] > 1e-4) {
-					const double treshold = (expectedPolicyHoldingCosts[i] - expectedPolicyHoldingCosts[i + 1]) * reviewHorizon
-						/ (empricalPolicyExceededStockouts[i + 1] - empricalPolicyExceededStockouts[i]);
-					double diff = treshold;
-					double base = 0.0;
-
-					if (i == 0) {
-						penaltyCost = treshold * 0.5;
-					}
-					else {
-						diff = treshold - penaltyCostsTreshold.back();
-						base = penaltyCostsTreshold.back();
-						penaltyCost = (treshold + penaltyCostsTreshold.back()) / 2;
-					}
-					penaltyCostsTreshold.push_back(treshold);
-					variedPenaltyCosts[0] = 0.25 * diff + base;
-					variedPenaltyCosts[1] = 0.5 * diff + base;
-					variedPenaltyCosts[2] = 0.75 * diff + base;
-				}
-				else {
-					penaltyCostsTreshold.push_back(penaltyCost);
-				}
-				possiblePenaltyCosts.push_back(penaltyCost);
-				possibleVariedPenaltyCosts.push_back(variedPenaltyCosts);
-			}
-			double base = penaltyCostsTreshold.back();
-			possiblePenaltyCosts.push_back(base * 1.5);
-			std::vector<double> variedPenaltyCosts = { base + base / 4, base + base / 2, base + 3 * base / 4 };
-			possibleVariedPenaltyCosts.push_back(variedPenaltyCosts);
-
-			penaltyCost = possiblePenaltyCosts[benchmarkAction];
-			class_config.Set("penaltyCost", penaltyCost);
-
-			targetPolicies.push_back(benchmarkAction);
-			targetPenaltyCosts.push_back(penaltyCost);
-			targetVariedPenaltyCosts.push_back(possibleVariedPenaltyCosts[benchmarkAction]);
-			int64_t policyIncrement = 2;// static_cast<int64_t>(std::floor((double)(totalActions - benchmarkAction + 1) / 3.0));
-			for (int64_t i = 1; i <= 2; i++) {
-				const int64_t policy = benchmarkAction + i * policyIncrement;
-				if (policy < totalActions - 1 && possiblePenaltyCosts[policy] > 0.0) {
-					targetPolicies.push_back(policy);
-					targetPenaltyCosts.push_back(possiblePenaltyCosts[policy]);
-					targetVariedPenaltyCosts.push_back(possibleVariedPenaltyCosts[policy]);
-				}
-			}
-			PrintImportantMDPParameters(false);
-		}
-		else {
-			PrintImportantMDPParameters(true);
-		}
+		PrintImportantMDPParameters(true);
 	}
 
 	void SetPenaltyCostForPolicy(int64_t policy) {
@@ -378,20 +511,20 @@ public:
 	}
 
 	void SetBenchmarkActionForPolicy(double penalty) {
-		if (penaltyCost < 0.0) {
-			throw DynaPlex::Error("InitialMDPProcessing: penaltycost should be greater than.");
-		}
+		if (penaltyCost < p_min || penaltyCost > p_max) 
+			throw DynaPlex::Error("InitialMDPProcessing: penaltycost should be between p_min and p_max.");	
+		else if (penaltyCost == p_min || penaltyCost == p_max) 
+			throw DynaPlex::Error("InitialMDPProcessing: p = p_min or p = p_max not yet implemented.");
 		else {
 			penaltyCost = penalty;
 			class_config.Set("penaltyCost", penaltyCost);
-			if (penaltyCost < penaltyCostsTreshold[0]) 
-				benchmarkAction = 0;	
-
 			for (int64_t i = 0; i < totalActions; i++) {
-				if ((penaltyCost >= penaltyCostsTreshold[i] && (penaltyCost < penaltyCostsTreshold[i + 1] || penaltyCostsTreshold[i + 1] == 0.0)) || i == totalActions - 1) {
-					benchmarkAction = i + 1;
+				if (penaltyCost < penaltyCostsTreshold[i]) {
+					benchmarkAction = i;
 					break;
 				}
+				if (penaltyCost == penaltyCostsTreshold[i])
+					throw DynaPlex::Error("InitialMDPProcessing: p = penaltyCostsTreshold not yet implemented.");
 			}
 			class_config.Set("benchmarkAction", benchmarkAction);
 		}
@@ -419,7 +552,7 @@ public:
 					const int64_t policy = targetPolicies[i];
 					dp.System() << policy << " " << possiblePenaltyCosts[policy] << " ";
 				}
-				for (int64_t i = 0; i < totalActions - 1; i++) {
+				for (int64_t i = 0; i < newtotalActions; i++) {
 					dp.System() << i << " " << penaltyCostsTreshold[i] << " ";
 				}
 			}
@@ -536,10 +669,11 @@ static void Train() {
 	config.Add("leadTime", leadTime);
 
 	InitialMDPProcessing base_pre_mdp(config);
-	base_pre_mdp.TestPerformance(test_config, reviewHorizon);
+	base_pre_mdp.SetGenerator(test_config, reviewHorizon);
 	int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
 	base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
 	config.Set("penaltyCost", base_pre_mdp.penaltyCost);
+	base_pre_mdp.FindBestStaticPolicy(test_config, reviewHorizon, base_pre_mdp.penaltyCost);
 	ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 }
 
@@ -563,12 +697,12 @@ static void NewTrain() {
 	int64_t num_generations = 1;
 	int64_t N = 100000;
 	int64_t M = 1000;
-	int64_t H_factor = 1;
+	int64_t H_factor = 2;
 
 	test_config.Add("number_of_trajectories", 1000);
 	test_config.Add("periods_per_trajectory", 5000);
 
-	int64_t reviewHorizon = 90;
+	int64_t base_reviewHorizon = 30;
 	int64_t numberOfItems = 20;
 	double demand_rate_limit = 5.0;
 	double high_variance_ratio = 0.5;
@@ -591,29 +725,36 @@ static void NewTrain() {
 		{"N",N},
 		{"num_gens",num_generations},
 		{"M",M},
-		{"H", H_factor * reviewHorizon},
+		{"H", H_factor * base_reviewHorizon},
 		{"L", 100},
 		{"nn_architecture",nn_architecture},
 		{"nn_training",nn_training},
 		{"enable_sequential_halving", true}
 	};
 
-	config.Add("reviewHorizon", reviewHorizon);
+	config.Add("reviewHorizon", base_reviewHorizon);
 	config.Add("aggregateTargetFillRate", aggregateTargetFillRate);
 	config.Add("numberOfItems", numberOfItems);
 	config.Add("demand_rate_limit", demand_rate_limit);
 	config.Add("high_variance_ratio", high_variance_ratio);
 	config.Add("leadTime", leadTime);
 
-	for (int64_t i = 1; i < 10; i++) {
-		config.Set("seed", 10061994 + 4081965 + i);
+	std::vector<int64_t> reviewHorizons = { 10, 30, 50, 70, 90 };
+	std::vector<double> targetFillRates = { 0.95, 0.90 };
 
+	for (double fillRate : targetFillRates) {
+		config.Set("aggregateTargetFillRate", fillRate);
 		InitialMDPProcessing base_pre_mdp(config);
-		base_pre_mdp.TestPerformance(test_config, reviewHorizon);
-		int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-		base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
-		config.Set("penaltyCost", base_pre_mdp.penaltyCost);
-		ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
+
+		for (int64_t reviewHorizon : reviewHorizons) {
+			config.Set("reviewHorizon", reviewHorizon);
+			base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+			double penaltyCost = base_pre_mdp.targetPenaltyCosts[1];
+			base_pre_mdp.FindBestStaticPolicy(test_config, reviewHorizon, penaltyCost);
+			config.Set("penaltyCost", penaltyCost);
+			dcl_config.Set("H", H_factor * reviewHorizon);
+			//ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
+		}
 	}
 }
 
@@ -629,7 +770,8 @@ static void ExtensiveTests() {
 	};
 	DynaPlex::VarGroup nn_training{
 		{"early_stopping_patience",15},
-		{"max_training_epochs", 100}
+		{"max_training_epochs", 100},
+		{"train_based_on_probs", false}
 	};
 	DynaPlex::VarGroup dcl_config{
 		{"L", 100},
@@ -655,7 +797,7 @@ static void ExtensiveTests() {
 	int64_t num_generations = 1;
 	int64_t N = 100000;
 	int64_t M = 1000;
-	int64_t H_factor = 1;
+	int64_t H_factor = 2;
 
 	int64_t base_reviewHorizon = 30;
 	config.Set("reviewHorizon", base_reviewHorizon);
@@ -668,8 +810,8 @@ static void ExtensiveTests() {
 	double base_variance_ratio = 0.5;
 	config.Set("high_variance_ratio", base_variance_ratio);
 
-	std::vector<double> targetFillRates = { 0.95 };
-	std::vector<int64_t> reviewHorizons = {  70, 90 };
+	std::vector<double> targetFillRates = { 0.95, 0.90 };
+	std::vector<int64_t> reviewHorizons = { 10, 30, 50, 70, 90 };
 	std::vector<int64_t> possibleNumberOfItems = { 10, 30 };
 	std::vector<int64_t> leadTimes = { 2, 6 };
 	std::vector<double> maxDemandRateLimit = { 1.0, 10.0 };
@@ -677,6 +819,7 @@ static void ExtensiveTests() {
 
 	//start
 	nn_training.Set("mini_batch_size", mini_batch);
+	dcl_config.Set("nn_training", nn_training);
 	dcl_config.Set("N", N);
 	dcl_config.Set("M", M);
 	dcl_config.Set("H", H_factor * base_reviewHorizon);
@@ -686,40 +829,40 @@ static void ExtensiveTests() {
 		config.Set("aggregateTargetFillRate", fillRate);
 		InitialMDPProcessing base_pre_mdp(config);
 
+		base_pre_mdp.SetGenerator(test_config, 90);
+		double penaltyCost = base_pre_mdp.targetPenaltyCosts[0];
+		config.Set("penaltyCost", penaltyCost);
 		for (int64_t reviewHorizon : reviewHorizons) {
 			config.Set("reviewHorizon", reviewHorizon);
 			dcl_config.Set("H", H_factor * reviewHorizon);
-			base_pre_mdp.TestPerformance(test_config, reviewHorizon);
-			std::vector<double> targetVariedPenaltyCosts = base_pre_mdp.targetVariedPenaltyCosts[1];
-
-			double penaltyCost = targetVariedPenaltyCosts[2];
-			config.Set("penaltyCost", penaltyCost);
-			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
-
-			for (double penaltyCost : targetVariedPenaltyCosts) {
-				config.Set("penaltyCost", penaltyCost);
-				ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
-			}
+			base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+			base_pre_mdp.FindBestStaticPolicy(test_config, reviewHorizon, penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
 		dcl_config.Set("H", H_factor * base_reviewHorizon);
 		config.Set("reviewHorizon", base_reviewHorizon);
 
-		base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
+		base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
 		std::vector<double> targetPenaltyCosts = base_pre_mdp.targetPenaltyCosts;
-		double base_penaltyCost = targetPenaltyCosts[1];
-		config.Set("penaltyCost", base_penaltyCost);
-
+		std::vector<double> targetVariedPenaltyCosts = base_pre_mdp.targetVariedPenaltyCosts[1];
 		for (double penaltyCost : targetPenaltyCosts) {
 			config.Set("penaltyCost", penaltyCost);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
+		for (double penaltyCost : targetVariedPenaltyCosts) {
+			config.Set("penaltyCost", penaltyCost);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, penaltyCost);
+			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
+		}
+		double base_penaltyCost = targetPenaltyCosts[1];
 		config.Set("penaltyCost", base_penaltyCost);
 
 		for (int64_t leadTime : leadTimes) {
 			config.Set("leadTime", leadTime);
 			InitialMDPProcessing base_pre_mdp(config);
-			//base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
+			base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, base_penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
 		config.Set("leadTime", base_leadTimes);
@@ -727,7 +870,8 @@ static void ExtensiveTests() {
 		for (double demand_rate_limit : maxDemandRateLimit) {
 			config.Set("demand_rate_limit", demand_rate_limit);
 			InitialMDPProcessing base_pre_mdp(config);
-			//base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
+			base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, base_penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
 		config.Set("demand_rate_limit", base_demand_rate);
@@ -735,7 +879,8 @@ static void ExtensiveTests() {
 		for (double high_variance_ratio : highVarianceRatios) {
 			config.Set("high_variance_ratio", high_variance_ratio);
 			InitialMDPProcessing base_pre_mdp(config);
-			//base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
+			base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, base_penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
 		config.Set("high_variance_ratio", base_variance_ratio);
@@ -743,14 +888,15 @@ static void ExtensiveTests() {
 		for (int64_t numberOfItems : possibleNumberOfItems) {
 			config.Set("numberOfItems", numberOfItems);
 			InitialMDPProcessing base_pre_mdp(config);
-			//base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
+			base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+			base_pre_mdp.FindBestStaticPolicy(test_config, base_reviewHorizon, base_penaltyCost);
 			ExtensiveTrainingTests(base_pre_mdp, config, test_config, dcl_config);
 		}
 		config.Set("numberOfItems", base_numberOfItems);
 	}
 }
 
-static void BaseStockPolicyTests() {
+static void BaseStockPolicyTests()  {
 	auto& dp = DynaPlexProvider::Get();
 
 	DynaPlex::VarGroup config;
@@ -768,9 +914,9 @@ static void BaseStockPolicyTests() {
 	test_config.Add("periods_per_trajectory", 5000);
 
 	std::vector<int64_t> reviewHorizons = { 10, 30, 50, 70, 90 };
-	std::vector<double> AFRTargets = { 0.95, 0.90 };
+	std::vector<double> AFRTargets = { 0.95, 0.90, 0.85 };
 
-	int64_t base_reviewHorizon = 30;
+	int64_t base_reviewHorizon = 90;
 	config.Set("reviewHorizon", base_reviewHorizon);
 	config.Set("numberOfItems", 20);
 	config.Set("leadTime", 4);
@@ -781,12 +927,11 @@ static void BaseStockPolicyTests() {
 		config.Set("aggregateTargetFillRate", fillRate);
 
 		InitialMDPProcessing base_pre_mdp(config);
-		base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-		std::vector<double> targetPenaltyCosts = base_pre_mdp.targetPenaltyCosts; 
+		base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+		std::vector<double> targetPenaltyCosts = base_pre_mdp.targetPenaltyCosts;
 		dp.System() << "---------------" << std::endl;
 
 		for (double penalty : targetPenaltyCosts) {
-			base_pre_mdp.SetBenchmarkActionForPolicy(penalty);
 			for (int64_t reviewHorizon : reviewHorizons) {
 				base_pre_mdp.TestPerformance(test_config, reviewHorizon, penalty);
 				dp.System() << std::endl;
@@ -813,12 +958,12 @@ static void BaseStockPolicyTestsRemaining()
 	test_config.Add("number_of_statistics", 8);
 
 	// variable parameters
-	std::vector<double> targetFillRates = { 0.95, 0.90, 0.85 };
+	std::vector<double> targetFillRates = { 0.95, 0.90};
 	std::vector<int64_t> reviewHorizons = { 10, 30, 50, 70, 90 };
-	std::vector<int64_t> possibleNumberOfItems = { 10, 30 };
-	std::vector<int64_t> leadTimes = { 2, 6 };
-	std::vector<double> maxDemandRateLimit = { 1.0, 10.0 };
-	std::vector<double> highVarianceRatios = { 0.0, 1.0 };
+	std::vector<int64_t> possibleNumberOfItems = { 10, 20, 30 };
+	std::vector<int64_t> leadTimes = { 2, 4, 6 };
+	std::vector<double> maxDemandRateLimit = { 1.0, 5.0, 10.0 };
+	std::vector<double> highVarianceRatios = { 0.0, 0.5, 1.0 };
 
 	test_config.Add("number_of_trajectories", 1000);
 	test_config.Add("periods_per_trajectory", 5000);
@@ -838,27 +983,16 @@ static void BaseStockPolicyTestsRemaining()
 		config.Set("aggregateTargetFillRate", fillRate);
 
 		InitialMDPProcessing base_pre_mdp(config);
-		base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-		int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-		double base_penaltyCost = base_pre_mdp.possiblePenaltyCosts[benchmarkAction];
-		base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
-		for (int64_t reviewHorizon : reviewHorizons) {
-			base_pre_mdp.TestPerformance(test_config, reviewHorizon, base_penaltyCost, true);
-			dp.System() << std::endl;
-			dp.System() << "---------------" << std::endl;
-		}
-		dp.System() << std::endl;
+		base_pre_mdp.SetGenerator(test_config, base_reviewHorizon);
+		double penaltyCost = base_pre_mdp.targetPenaltyCosts[1];
 		dp.System() << "---------------" << std::endl;
 
 		for (int64_t leadTime : leadTimes) {
 			config.Set("leadTime", leadTime);
-
 			InitialMDPProcessing base_pre_mdp(config);
-			base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-			int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-			base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
 			for (int64_t reviewHorizon : reviewHorizons) {
-				base_pre_mdp.TestPerformance(test_config, reviewHorizon, base_penaltyCost, true);
+				base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+				base_pre_mdp.TestPerformance(test_config, reviewHorizon, penaltyCost, true);
 				dp.System() << std::endl;
 				dp.System() << "---------------" << std::endl;
 			}
@@ -869,13 +1003,10 @@ static void BaseStockPolicyTestsRemaining()
 
 		for (double demand_rate_limit : maxDemandRateLimit) {
 			config.Set("demand_rate_limit", demand_rate_limit);
-
 			InitialMDPProcessing base_pre_mdp(config);
-			base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-			int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-			base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
 			for (int64_t reviewHorizon : reviewHorizons) {
-				base_pre_mdp.TestPerformance(test_config, reviewHorizon, base_penaltyCost, true);
+				base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+				base_pre_mdp.TestPerformance(test_config, reviewHorizon, penaltyCost, true);
 				dp.System() << std::endl;
 				dp.System() << "---------------" << std::endl;
 			}
@@ -886,13 +1017,10 @@ static void BaseStockPolicyTestsRemaining()
 
 		for (double high_variance_ratio : highVarianceRatios) {
 			config.Set("high_variance_ratio", high_variance_ratio);
-
 			InitialMDPProcessing base_pre_mdp(config);
-			base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-			int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-			base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
 			for (int64_t reviewHorizon : reviewHorizons) {
-				base_pre_mdp.TestPerformance(test_config, reviewHorizon, base_penaltyCost, true);
+				base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+				base_pre_mdp.TestPerformance(test_config, reviewHorizon, penaltyCost, true);
 				dp.System() << std::endl;
 				dp.System() << "---------------" << std::endl;
 			}
@@ -903,13 +1031,10 @@ static void BaseStockPolicyTestsRemaining()
 
 		for (int64_t numberOfItems : possibleNumberOfItems) {
 			config.Set("numberOfItems", numberOfItems);
-
 			InitialMDPProcessing base_pre_mdp(config);
-			base_pre_mdp.TestPerformance(test_config, base_reviewHorizon);
-			int64_t benchmarkAction = base_pre_mdp.targetPolicies[1];
-			base_pre_mdp.SetPenaltyCostForPolicy(benchmarkAction);
 			for (int64_t reviewHorizon : reviewHorizons) {
-				base_pre_mdp.TestPerformance(test_config, reviewHorizon, base_penaltyCost, true);
+				base_pre_mdp.SetGenerator(test_config, reviewHorizon);
+				base_pre_mdp.TestPerformance(test_config, reviewHorizon, penaltyCost, true);
 				dp.System() << std::endl;
 				dp.System() << "---------------" << std::endl;
 			}
@@ -923,8 +1048,6 @@ static void BaseStockPolicyTestsRemaining()
 int main() {
 	//BaseStockPolicyTests();
 	//BaseStockPolicyTestsRemaining();
-	//Train();
-	//NewTrain();
 	ExtensiveTests();
 
 	return 0;

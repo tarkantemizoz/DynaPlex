@@ -12,7 +12,7 @@ namespace DynaPlex::Models {
 
 		int64_t BaseStockPolicy::GetAction(const MDP::State& state) const
 		{
-			int64_t action = serviceLevelPolicy + 1;
+			int64_t action = serviceLevelPolicy;
 			return action;
 		}
 
@@ -24,12 +24,12 @@ namespace DynaPlex::Models {
 
 		int64_t GreedyDynamicPolicy::GetAction(const MDP::State& state) const
 		{
-			int64_t action = serviceLevelPolicy + 1;
+			int64_t action = serviceLevelPolicy;
 			if (state.TimeRemaining == mdp->leadTimes[0] + 1) {
-				if (state.AggregateFillRate == 1.0) {
+				if (state.AggregateFillRate == 1.0 && action > 0) {
 					action--;
 				}
-				if (state.AggregateFillRate < mdp->aggregateTargetFillRate) {
+				if (state.AggregateFillRate < mdp->aggregateTargetFillRate && action < mdp->totalActions - 1) {
 					action++;
 				}
 			}

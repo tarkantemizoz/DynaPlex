@@ -129,7 +129,7 @@ void TestPaperInstances(int64_t rng_seed) {
 				for (int64_t gen = 1; gen <= num_gens; gen++)
 				{
 					auto policy = dcl.GetPolicy(gen);
-					auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+					auto path = dp.System().filepath("DeepControlledLearning", "PolicyWeights", loc, "dcl_gen" + gen);
 					dp.SavePolicy(policy, path);
 				}
 			}
@@ -168,7 +168,7 @@ void TestPaperInstances(int64_t rng_seed) {
 				std::vector<DynaPlex::Policy> policies;
 				for (int64_t gen = 1; gen <= num_gens; gen++)
 				{
-					auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+					auto path = dp.System().filepath("DeepControlledLearning", "PolicyWeights", loc, "dcl_gen" + gen);
 					auto nn_policy = dp.LoadPolicy(mdp, path);
 					policies.push_back(nn_policy);
 				}

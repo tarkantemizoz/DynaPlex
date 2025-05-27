@@ -227,7 +227,7 @@ namespace DynaPlex
 			double addProb = trimmedProb / (maxPos + 1 - minPos);
 			for (size_t i = minPos; i <= maxPos; i++)
 			{
-				TrimmedPMF.push_back(ToBeTrimmed[i] + addProb);
+				TrimmedPMF.push_back(ToBeTrimmed[i]);
 			}
 			min += static_cast<int64_t>(minPos);
 			ToBeTrimmed = std::move(TrimmedPMF);
@@ -432,7 +432,11 @@ namespace DynaPlex
 			return true;
 		}
 		else {
-			std::cout << "sum of probabilities is not 1.0:  " << TotalProb << std::endl;
+			for (double prob : PMF) {
+				std::cout << prob;
+			}
+			std::cout << std::endl;
+			std::cout << "sum of probabilities is not 1.0:  " << TotalProb << "  " << copy.size() << std::endl;
 			return false;
 		}
 	}

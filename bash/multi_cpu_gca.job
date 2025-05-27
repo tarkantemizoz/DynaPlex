@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --time=20:00:00 --exclusive --nodes=5 --ntasks-per-node=1 --cpus-per-task=192 --partition genoa --mem=336G
+module load 2022
+module load CMake/3.23.1-GCCcore-11.3.0
+module load OpenMPI/4.1.4-GCC-11.3.0
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+
+cd ..
+cmake --build out/LinMPI --target generally_capable_lost_sales_agent -j120
+cd out/LinMPI/bin
+srun ./generally_capable_lost_sales_agent
+
+#did not test multi-node job with python yet. 
+#cd ../python/test
+#conda activate envDP
+#srun python basics.py

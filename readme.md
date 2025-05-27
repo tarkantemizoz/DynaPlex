@@ -5,7 +5,7 @@ This repository replicates the results presented in the papers:
 - *[Zero-shot Generalization in Inventory Management: Train, then Estimate and Decide](https://arxiv.org/abs/2411.00515)*
 
 For the original repository, including the latest updates and documentation, please visit [DynaPlex on GitHub](https://github.com/DynaPlex/DynaPlex).
-Please do not hesitate to contact the first author when replicating the results or if you have any questions.
+Please do not hesitate to contact the first author when replicating the results or if you have any questions. Make sure to include IO_DynaPlex folder to replicate all the results. 
 
 For the paper titled "Deep Controlled Learning for Inventory Control", please see folder **`DeepControlledLearning/`** for the weights of the neural networks for each inventory setting, and  **`src/lib/models/models/`** folder for the construction of MDP-EI's of the inventory problems.
 ---
@@ -18,6 +18,7 @@ For the paper titled "Zero-shot generalization in Inventory Management: Train, t
 - **`LICENSES/`**: Contains the licenses to used libraries and packages.
 - **`DeepControlledLearning/`**: Contains the test results and policy weights for the inventory problems presented in Deep Controlled Learning in Inventory Control paper.
 - **`GC-LSN_weights/`**: Contains the weights for the generally capable agent  GC-LSN  for lost sales inventory control.
+- **`IO_DynaPlex/`**: Folder where all networks weights are written and can be inferred to.
 - **`bash/`**: Contains the files used for running on a Linux HPC.
 - **`cmake/`**: Contains support functionality for building with CMake. 
 - **`docs/`**: Contains the documentation.

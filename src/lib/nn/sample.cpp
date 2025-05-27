@@ -29,6 +29,18 @@ namespace DynaPlex::NN {
 			}
 		}
 		vars.Add("cost_improvement", cost_improvement);
+		double sum = 0.0;
+		for (const auto& value : probabilities) {
+			if (std::isnan(value) || std::isinf(value)) {
+				DynaPlex::Error("Sample: Value error, probabilities contain NaN or infinity.");
+			}
+			sum += value;
+		}
+		const double tolerance = 1e-6; // Define a small tolerance level
+		if (std::abs(sum - 1.0) > tolerance) {
+			DynaPlex::Error("Sample: Value error, the sum of probabilities is not 1.0.");
+		}
+		vars.Add("probabilities", probabilities);
 		vars.Add("simulated_actions", simulated_actions);
 
 		return vars;		

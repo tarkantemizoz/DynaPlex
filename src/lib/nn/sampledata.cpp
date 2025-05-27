@@ -90,6 +90,7 @@ namespace DynaPlex::NN
 			vg.Get("q_hat", sample.q_hat);
 			vg.Get("z_stat", sample.z_stat);
 			vg.Get("cost_improvement", sample.cost_improvement);
+			vg.Get("probabilities", sample.probabilities);
 			vg.Get("simulated_actions", sample.simulated_actions);
 		}
 

@@ -13,6 +13,11 @@ namespace DynaPlex::Models {
 			return vars;
 		}
 
+		//int64_t MDP::GetH(const State& state) const
+		//{
+		//	return reviewHorizon + state.TimeRemaining;
+		//}
+
 		MDP::MDP(const VarGroup& config)
 		{
 			config.Get("aggregateTargetFillRate", aggregateTargetFillRate);
@@ -29,8 +34,6 @@ namespace DynaPlex::Models {
 			config.GetOrDefault("penaltyCost", penaltyCost, 100.0);
 			config.Get("sendBackUnits", sendBackUnits);
 			config.Get("backOrderCost", backOrderCost);
-
-			totalActions++;
 			sendBackCost = 0.0;
 
 			demand_distributions.reserve(numberOfItems);
@@ -41,10 +44,10 @@ namespace DynaPlex::Models {
 					demand_distributions.push_back(DynaPlex::DiscreteDist::GetPoissonDist(demandRates[i]));
 			}
 
-			baseStockLevels.reserve(totalActions - 1);
+			baseStockLevels.reserve(totalActions);
 			std::vector<int64_t> concatBaseStockLevels;
 			config.Get("concatBaseStockLevels", concatBaseStockLevels);
-			for (int64_t l = 0; l < totalActions - 1; l++)
+			for (int64_t l = 0; l < totalActions; l++)
 			{
 				std::vector<int64_t> subset(concatBaseStockLevels.begin() + l * numberOfItems, concatBaseStockLevels.begin() + (l + 1) * numberOfItems);
 				baseStockLevels.push_back(subset);
@@ -59,7 +62,7 @@ namespace DynaPlex::Models {
 		void MDP::SetAllowedActions(State& state) const
 		{			
 			state.AllowedActions.resize(totalActions, false);
-			state.AllowedActions[0] = true;
+			bool noneAllowed = true;
 			for (int64_t j = 1; j < totalActions - 1; ++j)
 			{
 				const auto& bs_levels = baseStockLevels[j - 1];
@@ -67,57 +70,50 @@ namespace DynaPlex::Models {
 				for (int64_t i = 0; i < numberOfItems; ++i)
 				{
 					if (bs_levels[i] > state.inventory_position[i] && bs_levels[i] < bs_levels_high[i]) {
-						state.AllowedActions[j] = true;
+						state.AllowedActions[j - 1] = true;
+						noneAllowed = false;
 						break;
 					}
 				}
 			}
 
-			const auto& bs_levels = baseStockLevels[totalActions - 2];
+			const auto& bs_levels = baseStockLevels[totalActions - 1];
 			for (int64_t i = 0; i < numberOfItems; ++i)
 			{
 				if (bs_levels[i] > state.inventory_position[i]) {
 					state.AllowedActions[totalActions - 1] = true;
+					noneAllowed = false;
 					break;
 				}
 			}
+
+			if (noneAllowed)
+				state.AllowedActions[benchmarkAction] = true;
 		}
 
 		double MDP::ModifyStateWithAction(State& state, int64_t action) const
 		{
 			double cost = 0.0;	
-			
-			if (action > 0) {
-				const std::vector<int64_t> New_BS_Levels = baseStockLevels[action - 1];
-				for (int64_t i = 0; i < numberOfItems; i++)
-				{
-					const int64_t toOrder = New_BS_Levels[i] - state.inventory_position[i];
-					if (toOrder >= 0) {
-						if (leadTimes[i] == 0)
-							state.state_vector[i].front() += toOrder;
-						else
-							state.state_vector[i].push_back(toOrder);
-						state.inventory_position[i] += toOrder;
-					}
-					else {
-						if (leadTimes[i] != 0)
-							state.state_vector[i].push_back(0);
-						if (sendBackUnits && state.state_vector[i].front() > 0) {
-							int64_t numSendBackUnits = std::min(-toOrder, state.state_vector[i].front());
-							state.state_vector[i].front() -= numSendBackUnits;
-							state.inventory_position[i] -= numSendBackUnits;
-							cost += sendBackCost * numSendBackUnits;
-						}
-					}
-				}
-			}
-			else {
-				for (int64_t i = 0; i < numberOfItems; i++)
-				{
+			const std::vector<int64_t> New_BS_Levels = baseStockLevels[action];
+			for (int64_t i = 0; i < numberOfItems; i++)
+			{
+				const int64_t toOrder = New_BS_Levels[i] - state.inventory_position[i];
+				if (toOrder >= 0) {
 					if (leadTimes[i] == 0)
-						state.state_vector[i].front() += 0;
+						state.state_vector[i].front() += toOrder;
 					else
+						state.state_vector[i].push_back(toOrder);
+					state.inventory_position[i] += toOrder;
+				}
+				else {
+					if (leadTimes[i] != 0)
 						state.state_vector[i].push_back(0);
+					if (sendBackUnits && state.state_vector[i].front() > 0) {
+						int64_t numSendBackUnits = std::min(-toOrder, state.state_vector[i].front());
+						state.state_vector[i].front() -= numSendBackUnits;
+						state.inventory_position[i] -= numSendBackUnits;
+						cost += sendBackCost * numSendBackUnits;
+					}
 				}
 			}
 
@@ -311,7 +307,7 @@ namespace DynaPlex::Models {
 			state.CIPPerReviewPeriod = 0.0;
 			state.SPPerReviewPeriod = 0.0;
 			state.AllowedActions.resize(totalActions, false);
-			state.AllowedActions[0] = true;
+			state.AllowedActions[benchmarkAction] = true;
 			state.policyChange.resize(reviewHorizon, 0);
 
 			//state.HoldingCosts = 0.0;

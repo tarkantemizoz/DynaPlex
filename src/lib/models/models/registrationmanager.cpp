@@ -12,6 +12,9 @@ namespace DynaPlex::Models {
 	namespace Zero_Shot_Lost_Sales_Inventory_Control {
 		void Register(DynaPlex::Registry&);
 	}
+	namespace lost_sales_general {
+		void Register(DynaPlex::Registry&);
+	}
 	namespace random_leadtimes {
 		void Register(DynaPlex::Registry&);
 	}
@@ -25,6 +28,7 @@ namespace DynaPlex::Models {
 		lost_sales::Register(registry);
 		perishable_systems::Register(registry);
 		Zero_Shot_Lost_Sales_Inventory_Control::Register(registry);
+		lost_sales_general::Register(registry);
 		random_leadtimes::Register(registry);
 		multi_item_sla::Register(registry);
 		driver_assignment::Register(registry);

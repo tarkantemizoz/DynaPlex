@@ -55,12 +55,18 @@ namespace DynaPlex::Models {
 			min_leadtime = 0;
 			min_demand = 2.0;
 			min_randomYield = 0.75;
-
+			maximizeRewards = false;
+			
 			if (evaluate) {				
 				if (config.HasKey("censoredDemand"))
 					config.Get("censoredDemand", censoredDemand);
 				else
 					censoredDemand = false;
+
+				if (config.HasKey("maximizeRewards"))
+					config.Get("maximizeRewards", maximizeRewards);
+				else
+					maximizeRewards = false;
 
 				config.Get("p", p);
 				order_crossover = false;
@@ -929,33 +935,40 @@ namespace DynaPlex::Models {
 			}				
 
 			int64_t demand = event.first;
-			double cost{ 0.0 };
+			double cost =  0.0;
+			double rewards = 0.0;
 			bool uncensored = true;
+			if (evaluate) 
+				state.cumulativeDemands += demand;
+
 			if (onHand >= demand)
 			{
 				onHand -= demand;
 				state.total_inv -= demand;
 				cost = onHand * h;
-
-				if (state.censoredDemand) 
-					cost -= demand * state.p;
+				rewards = cost - demand * state.p;
 			}
 			else
 			{
+				int64_t stockouts = demand - onHand;
 				state.total_inv -= onHand;
+				cost = stockouts * state.p;
+				rewards = -onHand * state.p;
+
+				if (evaluate) 
+					state.cumulativeStockouts += stockouts;
 
 				if (state.censoredDemand) {
 					uncensored = false;
-					cost -= onHand * state.p;
 					demand = onHand;
 				} 
-				else {
-					cost = (demand - onHand) * state.p;
-				}
 
 				onHand = 0;
 			}
 			state.state_vector.front() = onHand + new_coming_orders;
+
+			if (evaluate && state.cumulativeDemands > 0)
+				state.ServiceLevel = static_cast<double>(state.cumulativeDemands - state.cumulativeStockouts) / (static_cast<double>(state.cumulativeDemands));
 
 			if (state.collectStatistics) {
 				if (state.censoredLeadtime && state.orders_received > orders_received)
@@ -1012,7 +1025,10 @@ namespace DynaPlex::Models {
 			if (train_random_yield)
 				state.random_yield_nn_features = GetRandomYieldFeatures(state);
 
-			return cost;
+			if (!maximizeRewards)
+				return cost;
+			else
+				return rewards;
 		}
 
 		int64_t MDP::OrderArrivals(State& state, int64_t num_orders_expected, double random_val, bool updateStatistics) const{
@@ -1171,7 +1187,6 @@ namespace DynaPlex::Models {
 					}
 				}
 			}
-
 			for (int64_t i = 0; i < state.cycle_length; i++) {
 				if (state.demand_cycles[i] == current_cyclePeriod) {
 					state.cycle_probs[i] = probs;
@@ -1251,6 +1266,18 @@ namespace DynaPlex::Models {
 			}
 		}
 
+		std::vector<double> MDP::ReturnUsefulStatistics(const State& state) const
+		{
+			return { state.ServiceLevel };
+		}
+
+		void MDP::ResetHiddenStateVariables(State& state, RNG& rng) const
+		{
+			state.ServiceLevel = 1.0;
+			state.cumulativeDemands = 0;
+			state.cumulativeStockouts = 0;
+		}
+
 		void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
 			if (train_stochastic_leadtimes) {
 				if (state.order_crossover)
@@ -1269,7 +1296,7 @@ namespace DynaPlex::Models {
 				features.Add(state.min_leadtime);
 			}
 			if (train_cyclic_demand) {
-				features.Add(state.cycle_length);
+				//features.Add(state.cycle_length);
 				for (int64_t i = 0; i < max_num_cycles; i++) {
 					int64_t cyclePeriod = (state.period + i) % state.cycle_length;
 					features.Add(state.mean_cycle_demand[cyclePeriod]);
@@ -1302,6 +1329,9 @@ namespace DynaPlex::Models {
 			DynaPlex::DiscreteDist edge_dist = DiscreteDist::GetConstantDist(static_cast<int64_t>(std::ceil(max_demand)));
 
 			if (evaluate) {
+				state.ServiceLevel = 1.0;
+				state.cumulativeDemands = 0;
+				state.cumulativeStockouts = 0;
 				state.demand_cycles = demand_cycles;
 				state.cycle_length = demand_cycles.size();
 				mean_true_demand = mean_demand;
@@ -1799,7 +1829,6 @@ namespace DynaPlex::Models {
 					}
 				}
 			}
-
 			return state;
 		}
 
