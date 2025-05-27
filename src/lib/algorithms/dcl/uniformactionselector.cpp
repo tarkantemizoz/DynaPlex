@@ -171,19 +171,22 @@ namespace DynaPlex::DCL {
 		sample.sample_number = seed;
 		sample.action_label = traj.NextAction;
 		sample.cost_improvement.reserve(root_actions.size());
+		sample.probabilities.reserve(root_actions.size());
 		sample.simulated_actions.reserve(root_actions.size());
 		sample.q_hat = best_reward * objective;
 
-		bool ValueBasedProbability = true;
-		if (M > 1){
+		if (M > 1) {
 			comp.ComputeZstatistics(best_action_id);
+			comp.ComputeProbabilities(true);
 		}
-		else{
+		else {
+			comp.ComputeProbabilities(false);
 			sample.z_stat = 0.0;
 		}
 		double zValueForBestAlternative = 100.0;
 		for (int64_t action_id = 0; action_id < root_actions.size(); action_id++) {
 			sample.cost_improvement.push_back(comp.mean(action_id, prescribed_action_initial_policy) * objective);
+			sample.probabilities.push_back(comp.GetProbability(action_id));
 			sample.simulated_actions.push_back(root_actions[action_id]);
 			if (action_id != best_action_id && M > 1)
 			{

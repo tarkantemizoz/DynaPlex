@@ -19,6 +19,6 @@ namespace DynaPlex::NN
 		int64_t rng_seed;
 		int64_t early_stopping_patience;
 		int64_t max_training_epochs;
-		bool use_latest_network_weights;
+		bool train_based_on_probs;
 	};
 }//DynaPlex::NN

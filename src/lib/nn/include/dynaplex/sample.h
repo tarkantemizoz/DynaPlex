@@ -18,6 +18,7 @@ namespace DynaPlex::NN
         double z_stat;
         double q_hat;
         std::vector<double> cost_improvement;
+        std::vector<double> probabilities;
         std::vector<int64_t> simulated_actions;
 
         Sample() = default;

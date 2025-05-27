@@ -131,7 +131,7 @@ void TestPaperInstances() {
 			for (int64_t gen = 1; gen <= num_gens; gen++)
 			{
 				auto policy = dcl.GetPolicy(gen);
-				auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+				auto path = dp.System().filepath("DeepControlledLearning", "PolicyWeights", loc, "dcl_gen" + gen);
 				dp.SavePolicy(policy, path);
 			}
 		}
@@ -215,7 +215,7 @@ void TestPaperInstances() {
 					for (int64_t gen = 1; gen <= num_gens; gen++)
 					{
 						auto policy = dcl.GetPolicy(gen);
-						auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+						auto path = dp.System().filepath("DeepControlledLearning", "PolicyWeights", loc, "dcl_gen" + gen);
 						dp.SavePolicy(policy, path);
 					}
 				}
@@ -295,7 +295,7 @@ void TestPaperInstances() {
 						for (int64_t gen = 1; gen <= num_gens; gen++)
 						{
 							auto policy = dcl.GetPolicy(gen);
-							auto path = dp.System().filepath(loc, "dcl_gen" + gen);
+							auto path = dp.System().filepath("DeepControlledLearning", "PolicyWeights", loc, "dcl_gen" + gen);
 							dp.SavePolicy(policy, path);
 						}
 					}

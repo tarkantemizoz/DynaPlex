@@ -25,6 +25,7 @@ namespace DynaPlex::Models {
 			double max_demand, min_demand, max_period_demand;
 
 			bool evaluate;
+			bool maximizeRewards;
 			bool train_stochastic_leadtimes;
 			bool train_cyclic_demand;
 			bool train_random_yield;
@@ -48,6 +49,9 @@ namespace DynaPlex::Models {
 
 			struct State {
 				DynaPlex::StateCategory cat;
+				double ServiceLevel;
+				int64_t cumulativeStockouts;
+				int64_t cumulativeDemands;
 
 				int64_t period;
 				int64_t cycle_length;
@@ -99,6 +103,9 @@ namespace DynaPlex::Models {
 			};
   
 			using Event = std::pair<int64_t, std::vector<double>>;
+
+			std::vector<double> ReturnUsefulStatistics(const State&) const;
+			void ResetHiddenStateVariables(State& state, DynaPlex::RNG&) const;
 
 			//Remainder of the DynaPlex API:
 			double ModifyStateWithAction(State&, int64_t action) const;
