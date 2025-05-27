@@ -1553,11 +1553,6 @@ void TrainNetwork() {
 		{"nn_training",nn_training},
 		{"retrain_lastgen_only", false}
 	};
-
-	std::string id = "Zero_Shot_Lost_Sales_Inventory_Control";
-	std::string exp_num = "_tsl_tcd_large_new";
-	std::string loc = id + exp_num;
-	dp.System() << "Network id:  " << loc << std::endl;
 	
 	DynaPlex::VarGroup config;
 	config.Add("id", "Zero_Shot_Lost_Sales_Inventory_Control");
@@ -1584,8 +1579,8 @@ void TrainNetwork() {
 		auto policy = mdp->GetPolicy("greedy_capped_base_stock");
 		auto dcl = dp.GetDCL(mdp, policy, dcl_config);
 		dcl.TrainPolicy();
-		auto policy = dcl.GetPolicy(num_gens);
-		dp.SavePolicy(policy, path);
+		auto last_policy = dcl.GetPolicy(num_gens);
+		dp.SavePolicy(last_policy, path);
 	}
 
 	if (dp.System().WorldRank() == 0 && evaluate_paper_instances_case1)
