@@ -42,6 +42,9 @@ namespace DynaPlex :: Utilities{
 		Trajectory trajectory{};
 		trajectory.RNGProvider.SeedEventStreams(true, rng_seed);
 		mdp->InitiateState({ &trajectory,1 });
+		//for (int64_t i = 0; i < 50000; i++) {
+		//	mdp->InitiateState({ &trajectory,1 });
+		//}
 		
 		double cumulative_return = 0.0;
 		bool final_reached = false;
@@ -65,13 +68,14 @@ namespace DynaPlex :: Utilities{
 				policy->SetAction({ &trajectory,1 });
 				element.action = trajectory.NextAction;
 				mdp->IncorporateAction({ &trajectory,1 });
+				trace.push_back(std::move(element));
 			}
 			else if (cat.IsFinal()) {
 				final_reached = true;
 				element.action = 0;
 			}
 
-			trace.push_back(std::move(element)); 
+			//trace.push_back(std::move(element)); 
 		}
 
 		return trace;
