@@ -1425,15 +1425,15 @@ namespace DynaPlex::Models {
 					double min_std = std::sqrt(min_var);
 					double st_dev = rng.genUniform() * (mean * 2.0 - min_std) + min_std;
 					stdev_true_demand.push_back(st_dev);
-					if (state.cycle_length == 1) {
-						if (state.estimated_max_leadtime == state.estimated_min_leadtime && state.estimated_max_leadtime == 6) {
-							double a = (st_dev / mean) * (st_dev / mean) - 1 / mean;
-							if (a > 1)
-							{
-								std::cout << state.p << "  " << mean << std::endl;
-							}							
-						}
-					}
+					//if (state.cycle_length == 1) {
+					//	if (state.estimated_max_leadtime == state.estimated_min_leadtime && state.estimated_max_leadtime == 6) {
+					//		double a = (st_dev / mean) * (st_dev / mean) - 1 / mean;
+					//		if (a > 1)
+					//		{
+					//			std::cout << state.p << "  " << mean << std::endl;
+					//		}							
+					//	}
+					//}
 				}
 				state.mean_cycle_demand = mean_true_demand;
 				state.std_cycle_demand = stdev_true_demand;
