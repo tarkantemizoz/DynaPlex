@@ -28,3 +28,6 @@ bld/
 /CMakeUserPresets.json
 poetry*.lock
 /docs/build/
+
+# Personal helper notes (not part of the repo)
+/snellius_helper.md
