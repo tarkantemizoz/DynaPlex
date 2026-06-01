@@ -16,6 +16,20 @@
       }
     },
     {
+      "name": "mac-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
       "name": "linux-release",
       "hidden": true,
       "generator": "Unix Makefiles",
@@ -60,6 +74,23 @@
       "name": "x64-release",
       "hidden": true,
       "inherits": "x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "mac-debug",
+      "hidden": true,
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-g"
+      }
+    },
+    {
+      "name": "mac-release",
+      "hidden": true,
+      "inherits": "mac-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }

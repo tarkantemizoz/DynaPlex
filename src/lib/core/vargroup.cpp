@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include "dynaplex/vargroup.h"
 #include "dynaplex/error.h"
 #include "vargroup/nlohmann/json.h"

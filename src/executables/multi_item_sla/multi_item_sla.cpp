@@ -757,7 +757,7 @@ static void PaperTests(bool train = false, bool unimodality_test = false) {
 
 	int64_t mini_batch = 256;
 	int64_t num_generations = 1;
-	int64_t N = 100000;
+	int64_t N = 10000;
 	int64_t M = 1000;
 	int64_t H_factor = 2;
 

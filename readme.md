@@ -30,3 +30,38 @@ For the paper titled "Zero-shot generalization in Inventory Management: Train, t
   - **`tests/`**: Contains all code for unit testing (supported by googletest).
 
 ---
+
+## Building and running executables
+
+The repository ships with helper scripts under `bash/` that build a target with CMake and then run it, logging stdout/stderr to `bash/logs/<exe>_<timestamp>.{out,err}`. Build presets (`MacRel`, `LinRel`, `LinMPI`) come from `CMakePresets.json` / `CMakeUserPresets.json`; configure them once before the first run (e.g. `cmake --preset LinRel`).
+
+### macOS (local)
+
+```bash
+cd bash
+./mac.sh <executable> [args...]                       # builds + runs with MacRel
+PRESET=MacDeb ./mac.sh <executable>                   # override the preset
+```
+
+### Linux HPC (Snellius example)
+
+The cluster scripts are full sbatch jobs — they load the required modules, build the target, then `srun` it. You do **not** need to `source loadmodules.sh` first; everything is self-contained.
+
+```bash
+cd bash
+
+# single-node job (preset = LinRel, 1 node, 10h, 192 cpus, 336G)
+sbatch linux.job <executable> [args...]
+
+# multi-node MPI job (preset = LinMPI, 5 nodes, 20h)
+sbatch linux_mpi.job <executable> [args...]
+
+# override any sbatch directive at submit time
+sbatch --time=4:00:00 --nodes=2 linux_mpi.job <executable>
+```
+
+Both `.job` files resolve their repo location from the submitted script path, so they work correctly even if you keep multiple clones of the repo on the cluster. Module versions in `linux.job` / `linux_mpi.job` are pinned to the Snellius 2023 stack (CMake 3.26.3, OpenMPI 4.1.5); adjust them if your cluster exposes different module names.
+
+If anything is unclear or you hit cluster-specific issues, feel free to contact the author of this repository for guidance.
+
+---

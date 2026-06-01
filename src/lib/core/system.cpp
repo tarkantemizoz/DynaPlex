@@ -3,6 +3,7 @@
 #include <functional>
 #include <thread>  // for std::thread::hardware_concurrency
 #include <iomanip> // for std::setw, std::setfill
+#include <sstream>
 #include "dynaplex/system.h"
 #include "dynaplex/error.h"
 namespace fs = std::filesystem;

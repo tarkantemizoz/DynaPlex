@@ -64,7 +64,7 @@ namespace DynaPlex::Utilities {
 			for (size_t i = 0; i < ReturnPerTrajectory.size(); i++)
 			{
 				std::vector<double> stats = mdp->ReturnUsefulStatistics(trajectories[i].GetState());
-				if (!stats.size() == number_of_statistics)
+				if (!(stats.size() == number_of_statistics))
 					throw DynaPlex::Error("PolicyComparer: Error in logic - size of the useful statistics should be equal to number_of_statistics.");
 				for (size_t j = 1; j <= number_of_statistics; j++) {
 					ReturnPerTrajectory[i][j] = stats[j - 1];
