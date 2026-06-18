@@ -32,3 +32,6 @@ poetry*.lock
 # Personal helper notes (not part of the repo)
 /snellius_helper.md
 /windfarm.md
+
+# Editor config (machine-specific)
+.vscode/
