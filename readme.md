@@ -39,6 +39,34 @@ For the paper titled "How To Ace Your Next Service Level Contract Review?", plea
 
 The repository ships with helper scripts under `bash/` that build a target with CMake and then run it. Build presets (`WinDeb`, `MacRel`, `LinRel`, `LinMPI`) come from `CMakePresets.json` / `CMakeUserPresets.json`; configure them once before the first run (e.g. `cmake --preset LinRel`).
 
+### First-time setup
+
+Before building for the first time:
+
+1. **Copy the user-presets template into the repo root and edit it for your setup.** `CMakeUserPresets.json` is gitignored, so each user keeps their own copy:
+
+   ```bash
+   cp cmake/resources/CMakeUserPresets.json ./CMakeUserPresets.json
+   ```
+
+   Open the copy and adjust the paths for your machine — in particular `dynaplex_pytorch_path` (your LibTorch install) and `DYNAPLEX_IO_ROOT_DIR` (where DynaPlex reads/writes inputs and outputs).
+
+2. **Check `CMakePresets.json` for a suitable base preset.** The user presets in step 1 inherit from base presets defined in `CMakePresets.json` (e.g. `mac-release`, `linux-release`, `x64-debug`). Make sure your user preset inherits a base that matches your platform/build type; add a new base preset there if none fits.
+
+3. **Initialize external dependencies (googletest).**
+
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+4. **Configure CMake with your preset.**
+
+   ```bash
+   cmake --preset <YourPreset>     # e.g. MacRel, LinRel, WinDeb
+   ```
+
+After this, use the per-platform sections below to build and run executables.
+
 ### macOS (local)
 
 ```bash
