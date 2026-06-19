@@ -24,9 +24,6 @@ namespace DynaPlex::Models {
 	namespace driver_assignment {
 		void Register(DynaPlex::Registry&);
 	}
-	namespace windfarm {
-		void Register(DynaPlex::Registry&);
-	}
 	void RegistrationManager::RegisterAll(DynaPlex::Registry& registry) {
 		lost_sales::Register(registry);
 		perishable_systems::Register(registry);
@@ -35,6 +32,5 @@ namespace DynaPlex::Models {
 		random_leadtimes::Register(registry);
 		multi_item_sla::Register(registry);
 		driver_assignment::Register(registry);
-		windfarm::Register(registry);
 	}
 }
