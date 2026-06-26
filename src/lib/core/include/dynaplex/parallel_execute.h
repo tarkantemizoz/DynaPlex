@@ -2,6 +2,7 @@
 #include <future>
 #include <span>
 #include <thread>
+#include <tuple>
 #include <vector>
 #include "dynaplex/error.h"
 namespace DynaPlex {
@@ -29,10 +30,14 @@ namespace DynaPlex {
 
             std::vector<std::future<void>> futures;
             std::vector<std::promise<void>> promises(num_threads_to_use);
-            std::vector<std::jthread> threads;
+            std::vector<std::thread> threads;
 
             for (int64_t ThreadId = 0; ThreadId < num_threads_to_use; ThreadId++) {
-                auto [start, end] = sub_spans_indices[ThreadId];
+                // Plain locals rather than a structured binding: capturing a
+                // structured binding in a lambda is a C++20 feature not
+                // implemented by older Apple Clang (Intel macOS toolchains).
+                int64_t start = std::get<0>(sub_spans_indices[ThreadId]);
+                int64_t end   = std::get<1>(sub_spans_indices[ThreadId]);
                 futures.push_back(promises[ThreadId].get_future());
 
                 threads.emplace_back(
@@ -53,12 +58,17 @@ namespace DynaPlex {
             {
                 reporter(error_occurred);
             }
-            // Wait for all futures to complete. If any thread threw an exception, it'll be rethrown here.
+            // std::thread (unlike std::jthread) calls std::terminate if it is
+            // destroyed while still joinable, so join every thread before any
+            // future.get() below can throw.
+            for (auto& thread : threads) {
+                thread.join();
+            }
+            // All promises are now set. If any thread threw an exception, it'll
+            // be rethrown here.
             for (auto& future : futures) {
                 future.get();
             }
-            // Destroying the threads joins them.
-            threads.clear();
         }
 
 
