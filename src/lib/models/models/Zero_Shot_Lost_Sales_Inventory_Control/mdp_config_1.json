@@ -1,0 +1,18 @@
+{
+  "id": "Zero_Shot_Lost_Sales_Inventory_Control",
+  "evaluate": true,
+  "train_stochastic_leadtimes": true,
+  "train_cyclic_demand": true,
+  "discount_factor": 1.0,
+  "max_demand": 12.0,
+  "max_p": 100.0,
+  "max_leadtime": 10,
+  "max_num_cycles": 7,
+  "p": 69.0,
+  "stochastic_leadtime": true,
+  "order_crossover": true,
+  "leadtime_distribution": [0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 0.3, 0.3, 0.1, 0.0, 0.0],
+  "demand_cycles": [0, 1, 2, 3, 4],
+  "mean_demand": [11.0, 3.0, 5.0, 8.0, 6.0],
+  "stdDemand": [3.3166248, 1.7320508, 2.2360680, 2.8284271, 2.4494897]
+}

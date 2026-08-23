@@ -159,7 +159,7 @@ namespace DynaPlex::Tests {
 						ASSERT_EQ(feats_store, alt_feats_store);
 					}
 					action_count++;
-					allowedactioncount += mdp->CountAllowedActions(trajectory.GetState());
+					allowedactioncount += static_cast<int64_t>(mdp->AllowedActions(trajectory.GetState()).size());
 					ASSERT_NO_THROW(
 						policy->SetAction({ &trajectory,1 });
 					) << info << " Issue with policy. Did you correctly implement GetAction on policy " + policy->TypeIdentifier() + "?";
