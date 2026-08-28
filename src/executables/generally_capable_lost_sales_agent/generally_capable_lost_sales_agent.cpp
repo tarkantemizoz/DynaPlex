@@ -1407,9 +1407,13 @@ void TrainNetwork() {
 
 	int64_t num_gens = 5;
 	DynaPlex::VarGroup dcl_config{
-		//use paper hyperparameters everywhere. 
+		//use paper hyperparameters everywhere.
 		{"N",5000000},
 		{"num_gens",num_gens},
+		{"H",21},
+		{"M",500},
+		{"L",100},
+		{"reinitiate_counter",100},
 		{"SimulateOnlyPromisingActions", true},
 		{"Num_Promising_Actions", 16},
 		{"nn_architecture",nn_architecture},
@@ -1422,7 +1426,6 @@ void TrainNetwork() {
 	config.Add("evaluate", false);
 	config.Add("train_stochastic_leadtimes", true);
 	config.Add("train_cyclic_demand", true);
-	config.Add("train_random_yield", false);
 	config.Add("discount_factor", 1.0);
 	config.Add("max_demand", 12.0);
 	config.Add("max_p", 100.0);
@@ -1529,7 +1532,6 @@ void DemonstrateActions() // contact authors for these experiments
 	config.Add("stochastic_leadtime", false);
 	config.Add("train_stochastic_leadtimes", true);
 	config.Add("train_cyclic_demand", true);
-	config.Add("train_random_yield", false);
 	config.Add("discount_factor", 1.0);
 	config.Add("max_demand", 12.0);
 	config.Add("max_p", 100.0);

@@ -1,0 +1,12 @@
+{
+  "id": "Zero_Shot_Lost_Sales_Stationary",
+  "evaluate": true,
+  "discount_factor": 1.0,
+  "max_demand": 12.0,
+  "max_p": 100.0,
+  "max_leadtime": 10,
+  "p": 39.0,
+  "leadtime": 6,
+  "mean_demand": 8.0,
+  "stdDemand": 2.8284271
+}

@@ -35,3 +35,7 @@ poetry*.lock
 
 # Editor config (machine-specific)
 .vscode/
+.claude
+
+# CMake-generated copies of model configs (regenerated from src/lib/models/models/*/*.json at configure/build)
+/IO_DynaPlex/mdp_config_examples/
