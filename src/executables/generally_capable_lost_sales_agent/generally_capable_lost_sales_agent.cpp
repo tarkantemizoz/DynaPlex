@@ -1410,7 +1410,6 @@ void TrainNetwork() {
 		//use paper hyperparameters everywhere.
 		{"N",5000000},
 		{"num_gens",num_gens},
-		//MCTS/DCL rollout hyperparameters (previously hardcoded as MDP overrides GetH/GetM/GetL/GetReinitiateCounter):
 		{"H",21},
 		{"M",500},
 		{"L",100},
